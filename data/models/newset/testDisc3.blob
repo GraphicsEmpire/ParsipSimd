@@ -1,0 +1,65 @@
+[BLOBNODE 0]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(1, 2)
+[BLOBNODE 1]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(1.412951, 1.322797, 0.218739)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=DISC
+position=(0.000000, 0.000000, 0.000000)
+direction=(0.000000, 0.000000, 1.000000)
+radius=1.000000
+[BLOBNODE 2]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(3, 4)
+[BLOBNODE 3]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.083342, 1.422652, 0.348026)
+MtrlAmbient=(0.047059, 0.105882, 0.300000, 0.500000)
+MtrlDiffused=(0.094118, 0.211765, 0.600000, 1.000000)
+MtrlSpecular=(0.818824, 0.842353, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=RING
+position=(0.000000, 0.000000, 0.000000)
+direction=(0.000000, 0.000000, 1.000000)
+radius=1.000000
+[BLOBNODE 4]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-3.536749, 1.766261, 0.859394)
+MtrlAmbient=(0.064706, 0.300000, 0.049020, 0.500000)
+MtrlDiffused=(0.129412, 0.600000, 0.098039, 1.000000)
+MtrlSpecular=(0.825882, 0.920000, 0.819608, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=DISC
+position=(0.000000, 0.000000, 0.000000)
+direction=(0.000000, 0.000000, 1.000000)
+radius=1.000000
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=3
+CountOperators=2
+Depth=2
+RootIDs=(0)

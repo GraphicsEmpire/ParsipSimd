@@ -1,0 +1,69 @@
+[BLOBNODE 0]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=UNION
+ChildrenCount=4
+ChildrenIDsUseRange=1
+ChildrenIDsRange=(1, 4)
+[BLOBNODE 1]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 4.502831)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.054185, 0.179552, 0.218144)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=RING
+position=(0.000000, 0.000000, 0.000000)
+direction=(0.000000, 0.000000, 1.000000)
+radius=1.000000
+[BLOBNODE 2]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 4.626518)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.071000, 2.497778, 0.276034)
+MtrlAmbient=(0.127451, 0.094118, 0.300000, 0.500000)
+MtrlDiffused=(0.254902, 0.188235, 0.600000, 1.000000)
+MtrlSpecular=(0.850980, 0.837647, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=DISC
+position=(0.000000, 0.000000, 0.000000)
+direction=(0.000000, 0.000000, 1.000000)
+radius=1.000000
+[BLOBNODE 3]
+IsOperator=0
+AffineScale=(1.030441, 1.000000, 4.647737)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(2.317366, 2.408324, 0.140136)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=RING
+position=(0.000000, 0.000000, 0.000000)
+direction=(0.000000, 0.000000, 1.000000)
+radius=1.000000
+[BLOBNODE 4]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 4.499752)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(2.513183, 0.146523, 0.245138)
+MtrlAmbient=(0.080392, 0.080392, 0.300000, 0.500000)
+MtrlDiffused=(0.160784, 0.160784, 0.600000, 1.000000)
+MtrlSpecular=(0.832157, 0.832157, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=DISC
+position=(0.000000, 0.000000, 0.000000)
+direction=(0.000000, 0.000000, 1.000000)
+radius=1.000000
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=4
+CountOperators=1
+Depth=1
+RootIDs=(0)

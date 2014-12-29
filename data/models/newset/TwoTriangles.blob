@@ -1,0 +1,43 @@
+[BLOBNODE 0]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=UNION
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(1, 2)
+[BLOBNODE 1]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.788448, 1.226657, 0.727900)
+MtrlAmbient=(0.072549, 0.094118, 0.300000, 0.500000)
+MtrlDiffused=(0.145098, 0.188235, 0.600000, 1.000000)
+MtrlSpecular=(0.829020, 0.837647, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=TRIANGLE
+corner0=(-1.000000, 0.000000, 0.000000)
+corner1=(1.000000, 0.000000, 0.000000)
+corner2=(0.000000, 1.000000, 0.000000)
+[BLOBNODE 2]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.321879, 1.149907, 0.827757)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=TRIANGLE
+corner0=(-1.000000, 0.000000, 0.000000)
+corner1=(1.000000, 0.000000, 0.000000)
+corner2=(0.000000, 1.000000, 0.000000)
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=2
+CountOperators=1
+Depth=1
+RootIDs=(0)

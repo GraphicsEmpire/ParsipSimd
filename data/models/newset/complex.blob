@@ -1,0 +1,245 @@
+[BLOBNODE 0]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=UNION
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(1, 2)
+[BLOBNODE 1]
+IsOperator=0
+AffineScale=(3.028351, 1.964909, 2.867292)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.066812, 0.467459, -0.053294)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 2]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=UNION
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(3, 4)
+[BLOBNODE 3]
+IsOperator=0
+AffineScale=(0.273014, 0.770248, 0.642335)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(1.017839, 0.552399, -0.192995)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CYLINDER
+position=(-1.000000, 0.000000, 0.000000)
+direction=(1.000000, 0.000000, 0.000000)
+radius=0.010000
+height=4.000000
+[BLOBNODE 4]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=UNION
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(5, 6)
+[BLOBNODE 5]
+IsOperator=0
+AffineScale=(0.209728, 0.700714, 0.660219)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.575838, 0.542011, -0.207989)
+MtrlAmbient=(0.500000, 0.000000, 0.000000, 0.500000)
+MtrlDiffused=(1.000000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(1.000000, 0.800000, 0.800000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CYLINDER
+position=(-1.000000, 0.000000, 0.000000)
+direction=(1.000000, 0.000000, 0.000000)
+radius=0.010000
+height=4.000000
+[BLOBNODE 6]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=UNION
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(7, 8)
+[BLOBNODE 7]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.815444, 0.021876, 0.307092)
+MtrlAmbient=(0.113725, 0.107843, 0.300000, 0.500000)
+MtrlDiffused=(0.227451, 0.215686, 0.600000, 1.000000)
+MtrlSpecular=(0.845490, 0.843137, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 8]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=UNION
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(9, 10)
+[BLOBNODE 9]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.654247, 0.091047, 0.219122)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 10]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=UNION
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(11, 16)
+[BLOBNODE 11]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(12, 15)
+[BLOBNODE 12]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(13, 14)
+[BLOBNODE 13]
+IsOperator=0
+AffineScale=(0.906894, 0.886246, 0.974365)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.029446, 0.658993, 1.313770)
+MtrlAmbient=(0.198039, 0.270588, 0.300000, 0.500000)
+MtrlDiffused=(0.396078, 0.541176, 0.600000, 1.000000)
+MtrlSpecular=(0.879216, 0.908235, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 14]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.662163, 0.231270, 1.315750)
+MtrlAmbient=(0.119608, 0.258824, 0.300000, 0.500000)
+MtrlDiffused=(0.239216, 0.517647, 0.600000, 1.000000)
+MtrlSpecular=(0.847843, 0.903529, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 15]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.144732, -0.166544, 0.702790)
+MtrlAmbient=(0.064706, 0.225490, 0.300000, 0.500000)
+MtrlDiffused=(0.129412, 0.450980, 0.600000, 1.000000)
+MtrlSpecular=(0.825882, 0.890196, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 16]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(17, 18)
+[BLOBNODE 17]
+IsOperator=0
+AffineScale=(1.000000, 0.728832, 1.006329)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.551147, 0.997321, -0.942957)
+MtrlAmbient=(0.123529, 0.282353, 0.300000, 0.500000)
+MtrlDiffused=(0.247059, 0.564706, 0.600000, 1.000000)
+MtrlSpecular=(0.849412, 0.912941, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 18]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(19, 22)
+[BLOBNODE 19]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(20, 21)
+[BLOBNODE 20]
+IsOperator=0
+AffineScale=(0.996555, 0.799047, 0.791397)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.134023, 0.142793, -1.109250)
+MtrlAmbient=(0.107843, 0.290196, 0.300000, 0.500000)
+MtrlDiffused=(0.215686, 0.580392, 0.600000, 1.000000)
+MtrlSpecular=(0.843137, 0.916078, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 21]
+IsOperator=0
+AffineScale=(1.222482, 0.892815, 0.651127)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.623453, 0.512954, -1.463814)
+MtrlAmbient=(0.076471, 0.288235, 0.300000, 0.500000)
+MtrlDiffused=(0.152941, 0.576471, 0.600000, 1.000000)
+MtrlSpecular=(0.830588, 0.915294, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 22]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.062373, 0.808874, -1.455561)
+MtrlAmbient=(0.088235, 0.264706, 0.300000, 0.500000)
+MtrlDiffused=(0.176471, 0.529412, 0.600000, 1.000000)
+MtrlSpecular=(0.835294, 0.905882, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=12
+CountOperators=11
+Depth=9
+RootIDs=(0)

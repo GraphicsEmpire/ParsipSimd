@@ -1,0 +1,42 @@
+[BLOBNODE 1]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=DIFFERENCE
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(2, 3)
+[BLOBNODE 2]
+IsOperator=0
+AffineScale=(2.077061, 2.328321, 2.364651)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.581938, 0.620852, 0.683434)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 3]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.684972, 0.641305, 0.650504)
+MtrlAmbient=(0.113725, 0.076471, 0.300000, 0.500000)
+MtrlDiffused=(0.227451, 0.152941, 0.600000, 1.000000)
+MtrlSpecular=(0.845490, 0.830588, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CYLINDER
+position=(-1.000000, 0.000000, 0.000000)
+direction=(1.000000, 0.000000, 0.000000)
+radius=0.010000
+height=4.000000
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=2
+CountOperators=1
+Depth=2
+RootIDs=(1)

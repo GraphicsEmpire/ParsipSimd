@@ -1,0 +1,127 @@
+[BLOBNODE 0]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=10
+ChildrenIDsUseRange=1
+ChildrenIDsRange=(1, 10)
+[BLOBNODE 1]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.586315, 0.486163, 0.978333)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 2]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.205520, 0.574790, 0.442868)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 3]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.655243, 0.702906, -0.123656)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 4]
+IsOperator=0
+AffineScale=(1.364815, 1.000000, 2.291752)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.165362, 0.195020, 0.307417)
+MtrlAmbient=(0.076471, 0.300000, 0.043137, 0.500000)
+MtrlDiffused=(0.152941, 0.600000, 0.086275, 1.000000)
+MtrlSpecular=(0.830588, 0.920000, 0.817255, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 5]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.120321, 0.059495, 0.158909)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 6]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.983697, 0.656634, -1.645021)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 7]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.966246, 1.141196, -0.448225)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 8]
+IsOperator=0
+AffineScale=(1.513296, 1.000000, 1.649681)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.120221, 0.174336, -1.094177)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 9]
+IsOperator=0
+AffineScale=(1.704315, 1.521187, 1.634941)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.179387, 1.264502, -0.613560)
+MtrlAmbient=(0.031373, 0.072549, 0.300000, 0.500000)
+MtrlDiffused=(0.062745, 0.145098, 0.600000, 1.000000)
+MtrlSpecular=(0.812549, 0.829020, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 10]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(1.066025, 0.492457, -0.407356)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=10
+CountOperators=1
+Depth=1
+RootIDs=(0)

@@ -1,0 +1,68 @@
+[BLOBNODE 0]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=DIFFERENCE
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(3, 4)
+[BLOBNODE 3]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=DIFFERENCE
+ChildrenCount=2
+ChildrenIDsUseRange=0
+ChildrenIDs=(1, 2)
+[BLOBNODE 1]
+IsOperator=0
+AffineScale=(1.367538, 3.625320, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.102097, 2.212820, 0.515038)
+MtrlAmbient=(0.300000, 0.037255, 0.115686, 0.500000)
+MtrlDiffused=(0.600000, 0.074510, 0.231373, 1.000000)
+MtrlSpecular=(0.920000, 0.814902, 0.846274, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CYLINDER
+position=(-1.000000, 0.000000, 0.000000)
+direction=(1.000000, 0.000000, 0.000000)
+radius=0.010000
+height=4.000000
+[BLOBNODE 2]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(-0.128553, 0.608761, -0.004195, 0.782858)
+AffineTranslate=(-0.396514, 2.889869, 1.806952)
+MtrlAmbient=(0.072549, 0.141176, 0.300000, 0.500000)
+MtrlDiffused=(0.145098, 0.282353, 0.600000, 1.000000)
+MtrlSpecular=(0.829020, 0.856471, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CYLINDER
+position=(-1.000000, 0.000000, 0.000000)
+direction=(1.000000, 0.000000, 0.000000)
+radius=0.010000
+height=4.000000
+[BLOBNODE 4]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, -0.730047, 0.000000, 0.683397)
+AffineTranslate=(2.302321, 2.022309, -0.341630)
+MtrlAmbient=(0.086275, 0.098039, 0.300000, 0.500000)
+MtrlDiffused=(0.172549, 0.196078, 0.600000, 1.000000)
+MtrlSpecular=(0.834510, 0.839216, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CYLINDER
+position=(-1.000000, 0.000000, 0.000000)
+direction=(1.000000, 0.000000, 0.000000)
+radius=0.010000
+height=4.000000
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=3
+CountOperators=2
+Depth=3
+RootIDs=(0)

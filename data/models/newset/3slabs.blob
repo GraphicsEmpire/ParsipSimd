@@ -1,0 +1,67 @@
+[BLOBNODE 0]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=blend
+ChildrenCount=4
+ChildrenIDsUseRange=1
+ChildrenIDsRange=(1, 4)
+[BLOBNODE 1]
+IsOperator=0
+AffineScale=(0.211891, 1.000000, 0.996255)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-2.534280, 1.306457, -0.077831)
+MtrlAmbient=(0.500000, 0.000000, 0.000000, 0.500000)
+MtrlDiffused=(1.000000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(1.000000, 0.800000, 0.800000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CUBE
+position=(0.000000, 0.000000, 0.000000)
+side=1.000000
+[BLOBNODE 2]
+IsOperator=0
+AffineScale=(1.087713, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.045943, 1.256074, -0.094928)
+MtrlAmbient=(0.164706, 0.164706, 0.164706, 0.500000)
+MtrlDiffused=(0.329412, 0.329412, 0.329412, 1.000000)
+MtrlSpecular=(0.865882, 0.865882, 0.865882, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CYLINDER
+position=(-1.000000, 0.000000, 0.000000)
+direction=(1.000000, 0.000000, 0.000000)
+radius=0.010000
+height=4.000000
+[BLOBNODE 3]
+IsOperator=0
+AffineScale=(0.235924, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.029899, 1.373083, -0.136194)
+MtrlAmbient=(0.000000, 0.166667, 0.500000, 0.500000)
+MtrlDiffused=(0.000000, 0.333333, 1.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.866667, 1.000000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CUBE
+position=(0.000000, 0.000000, 0.000000)
+side=1.000000
+[BLOBNODE 4]
+IsOperator=0
+AffineScale=(0.200235, 1.000000, 1.058800)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(2.816028, 1.275897, -0.094879)
+MtrlAmbient=(0.166667, 0.333333, 0.000000, 0.500000)
+MtrlDiffused=(0.333333, 0.666667, 0.000000, 1.000000)
+MtrlSpecular=(0.866667, 0.933333, 0.800000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CUBE
+position=(0.000000, 0.000000, 0.000000)
+side=1.000000
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=4
+CountOperators=1
+Depth=1
+RootIDs=(0)

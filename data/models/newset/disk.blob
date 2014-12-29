@@ -1,0 +1,21 @@
+[BLOBNODE 0]
+IsOperator=0
+AffineScale=(0.681753, 0.526398, 1.043018)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-0.431348, 0.071544, 0.205943)
+MtrlAmbient=(0.329412, 0.329412, 0.329412, 0.500000)
+MtrlDiffused=(0.658824, 0.658824, 0.658824, 1.000000)
+MtrlSpecular=(0.931765, 0.931765, 0.931765, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=DISC
+position=(0.000000, 0.000000, 0.000000)
+direction=(0.000000, 0.000000, 1.000000)
+radius=1.000000
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=1
+CountOperators=0
+Depth=1
+RootIDs=(0)

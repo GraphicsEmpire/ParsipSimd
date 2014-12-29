@@ -1,0 +1,141 @@
+[BLOBNODE 0]
+IsOperator=1
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.000000, 0.000000, 0.000000)
+OperatorType=BLEND
+ChildrenCount=11
+ChildrenIDsUseRange=1
+ChildrenIDsRange=(1, 11)
+[BLOBNODE 1]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(1.802059, 0.257527, 0.248669)
+MtrlAmbient=(0.113725, 0.300000, 0.056863, 0.500000)
+MtrlDiffused=(0.227451, 0.600000, 0.113725, 1.000000)
+MtrlSpecular=(0.845490, 0.920000, 0.822745, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 2]
+IsOperator=0
+AffineScale=(1.415924, 0.252867, 1.060722)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.260041, -0.240948, 1.108351)
+MtrlAmbient=(0.064706, 0.054902, 0.300000, 0.500000)
+MtrlDiffused=(0.129412, 0.109804, 0.600000, 1.000000)
+MtrlSpecular=(0.825882, 0.821961, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CUBE
+position=(0.000000, 0.000000, 0.000000)
+side=1.000000
+[BLOBNODE 3]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.203043, 0.325530, 0.230036)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 4]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(1.807323, 0.224185, 2.155847)
+MtrlAmbient=(0.186275, 0.158824, 0.300000, 0.500000)
+MtrlDiffused=(0.372549, 0.317647, 0.600000, 1.000000)
+MtrlSpecular=(0.874510, 0.863529, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 5]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(1.664619, 1.237022, 2.065229)
+MtrlAmbient=(0.300000, 0.076471, 0.288235, 0.500000)
+MtrlDiffused=(0.600000, 0.152941, 0.576471, 1.000000)
+MtrlSpecular=(0.920000, 0.830588, 0.915294, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 6]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.170500, 1.356694, 0.214944)
+MtrlAmbient=(0.123529, 0.092157, 0.300000, 0.500000)
+MtrlDiffused=(0.247059, 0.184314, 0.600000, 1.000000)
+MtrlSpecular=(0.849412, 0.836863, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 7]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.113745, 0.266081, 2.199797)
+MtrlAmbient=(0.500000, 0.333333, 0.000000, 0.500000)
+MtrlDiffused=(1.000000, 0.666667, 0.000000, 1.000000)
+MtrlSpecular=(1.000000, 0.933333, 0.800000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 8]
+IsOperator=0
+AffineScale=(1.338419, 0.201637, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.244955, 0.910853, 1.098476)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CUBE
+position=(0.000000, 0.000000, 0.000000)
+side=1.000000
+[BLOBNODE 9]
+IsOperator=0
+AffineScale=(1.273491, 0.211010, 0.999900)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.239613, 1.891023, 1.055526)
+MtrlAmbient=(0.050980, 0.300000, 0.050980, 0.500000)
+MtrlDiffused=(0.101961, 0.600000, 0.101961, 1.000000)
+MtrlSpecular=(0.820392, 0.920000, 0.820392, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=CUBE
+position=(0.000000, 0.000000, 0.000000)
+side=1.000000
+[BLOBNODE 10]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(1.697776, 1.328374, 0.164914)
+MtrlAmbient=(0.300000, 0.000000, 0.000000, 1.000000)
+MtrlDiffused=(0.600000, 0.000000, 0.000000, 1.000000)
+MtrlSpecular=(0.800000, 0.600000, 0.600000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[BLOBNODE 11]
+IsOperator=0
+AffineScale=(1.000000, 1.000000, 1.000000)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(-1.200868, 1.332519, 1.983230)
+MtrlAmbient=(0.154902, 0.300000, 0.064706, 0.500000)
+MtrlDiffused=(0.309804, 0.600000, 0.129412, 1.000000)
+MtrlSpecular=(0.861961, 0.920000, 0.825882, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=11
+CountOperators=1
+Depth=1
+RootIDs=(0)

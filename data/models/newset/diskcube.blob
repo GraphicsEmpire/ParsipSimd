@@ -1,0 +1,21 @@
+
+[BLOBNODE 0]
+IsOperator=0
+AffineScale=(7.094025, 2.926773, 7.477745)
+AffineRotate=(0.000000, 0.000000, 0.000000, 1.000000)
+AffineTranslate=(0.076703, 0.150971, 0.035794)
+MtrlAmbient=(0.056863, 0.035294, 0.300000, 0.500000)
+MtrlDiffused=(0.113725, 0.070588, 0.600000, 1.000000)
+MtrlSpecular=(0.822745, 0.814118, 0.920000, 1.000000)
+MtrlShininess=32.000000
+PrimitiveType=POINT
+position=(0.000000, 0.000000, 0.000000)
+
+[Global]
+FileVersion=6
+NumLayers=1
+CurrentLayer=1
+CountPrimitives=1
+CountOperators=0
+Depth=1
+RootIDs=(0)

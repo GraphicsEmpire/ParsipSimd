@@ -1,0 +1,12 @@
+========================================================================
+    CONSOLE APPLICATION : ParsipCmd Project Overview
+========================================================================
+1.For Sandy Bridge compile with gcc 4.6 and use the following gcc hints:
+
+-march=corei7-avx -mtune=corei7-avx
+
+2.For Core2 Due laptop
+-march=core2 -msse3
+
+3.For Xeon Processor without AVX:
+-msse4.2 -msse3 -mssse3
