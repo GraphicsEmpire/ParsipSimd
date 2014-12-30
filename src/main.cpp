@@ -126,6 +126,7 @@ void Resize(int w, int h);
 void Keyboard(int key, int x, int y);
 void MousePress(int button, int state, int x, int y);
 void MouseMove(int x, int y);
+void MousePassiveMove(int x, int y);
 
 //Charts
 void ProduceUsageChartAsTexture(const char* chrDBPath,
@@ -400,10 +401,21 @@ void Keyboard(int key, int x, int y)
 
 void MousePress(int button, int state, int x, int y)
 {
-	if(state == GLUT_DOWN)
-		g_arcBallCam.mousePress(button, state, x, y);
-	else
-		g_arcBallCam.mousePress(PS::ArcBallCamera::mbMiddle, state, x, y);
+	// Wheel reports as button 3(scroll up) and button 4(scroll down)
+	if ((button == 3) || (button == 4)) {
+		// Each wheel event reports like a button click, GLUT_DOWN then GLUT_UP
+		if (state == GLUT_UP)
+			return; // Disregard redundant GLUT_UP events
+
+		if (button == 3)
+			g_arcBallCam.setZoom(g_arcBallCam.getZoom() - 0.5);
+		else
+			g_arcBallCam.setZoom(g_arcBallCam.getZoom() + 0.5);
+	}
+
+	g_arcBallCam.mousePress(button, state, x, y);
+
+	glutPostRedisplay();
 }
 
 void MouseMove(int x, int y)
@@ -416,6 +428,16 @@ void MouseMove(int x, int y)
 	}
 	else
 		g_arcBallCam.mouseMove(x, y);
+	glutPostRedisplay();
+}
+
+void MousePassiveMove(int x, int y) {
+
+}
+
+void MouseWheel(int button, int dir, int x, int y)
+{
+	g_arcBallCam.mouseWheel(button, dir, x, y);
 	glutPostRedisplay();
 }
 
@@ -894,6 +916,9 @@ int main(int argc, char* argv[])
 	glutReshapeFunc(Resize);
 	glutMouseFunc(MousePress);
 	glutMotionFunc(MouseMove);
+	glutPassiveMotionFunc(MousePassiveMove);
+	glutMouseWheelFunc(MouseWheel);
+
 	glutSpecialFunc(Keyboard);
 	glutCloseFunc(Close);
 	//glutKeyboardFunc(Keyboard);
@@ -1122,7 +1147,7 @@ bool Run_CPUPoly(const AnsiStr& strModelFP)
 		if(bres)
 		{
 			printf("Log.dat file created with format [ctThreads PolyTime] just run gnuplot on it.\n");
-			printf("Example: plot \"./ParsipCmdLinuxLog.dat\" using 1:2 title \"Performance\" with lines. \n");
+			printf("Example: plot \"./ParsipSIMDLinuxLog.dat\" using 1:2 title \"Performance\" with lines. \n");
 		}
 	}
 
