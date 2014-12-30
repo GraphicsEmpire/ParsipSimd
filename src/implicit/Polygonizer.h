@@ -17,7 +17,7 @@ namespace SIMDPOLY{
 using namespace tbb;
 using namespace PS::MATHSIMD;
 
-#define GRID_DIM_8
+#define GRID_DIM_16
 
 #ifdef GRID_DIM_32
 #define GRID_DIM 32

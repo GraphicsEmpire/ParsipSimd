@@ -1,12 +1,10 @@
-// ParsipCmd.cpp : Defines the entry point for the console application.
-//
-
 #include <map>
 #include <assert.h>
 
 #include "graphics/selectgl.h"
 #include "graphics/ArcBallCamera.h"
 #include "graphics/GLFuncs.h"
+#include "graphics/AppScreen.h"
 
 #include "tbb/task_scheduler_init.h"
 #include "tbb/tick_count.h"
@@ -923,44 +921,10 @@ int main(int argc, char* argv[])
 	glutCloseFunc(Close);
 	//glutKeyboardFunc(Keyboard);
 
-
-	//////////////////////////////////////////////////////////////
-	//Initialization 
-	static const GLfloat lightColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	static const GLfloat lightPos[4] = { 5.0f, 5.0f, 10.0f, 0.0f };
-
-	//glFrontFace(GL_CCW);
-	//Set Colors of Light
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightColor);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, lightColor);
-
-	//Set Light Position
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-
-	//Turn on Light 0
-	glEnable(GL_LIGHT0);
-
-	//Enable Lighting
-	glEnable(GL_LIGHTING);
-	glEnable(GL_TEXTURE_2D);
-	//Enable features we want to use from OpenGL			
-	glShadeModel(GL_SMOOTH);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glClearColor(0.45f, 0.45f, 0.45f, 1.0f);
-
-
-	//Compiling shaders
-	GLenum err = glewInit();
-	if (err != GLEW_OK)
-	{
-		//Problem: glewInit failed, something is seriously wrong.
-		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-		exit(1);
-	}
-	CompileShaderCode(g_lpVertexShaderCode, g_lpFragShaderCode, g_uiShader);
 	//////////////////////////////////////////////////////////////////////////
+	def_initgl();
+	CompileShaderCode(g_lpVertexShaderCode, g_lpFragShaderCode, g_uiShader);
+
 	{
 		using namespace PS;
 		using namespace PS::FILESTRINGUTILS;
@@ -975,7 +939,11 @@ int main(int argc, char* argv[])
 	}
 
 	//Render CPU or GPU renderer
-	bool bPolyRes = Run_CPUPoly(strModelFP);
+	bool bPolyRes = false;
+	if(g_appSettings.bRenderGPU)
+		bPolyRes = Run_GPUPoly(strModelFP);
+	else
+		bPolyRes = Run_CPUPoly(strModelFP);
 
 	if(bPolyRes)
 		glutMainLoop();
@@ -996,7 +964,7 @@ bool Run_GPUPoly(const AnsiStr& strModelFP)
 
 	printf("Using Input model %s.\n", strModelFP.c_str());
 
-	if(g_lpGPUPoly)
+	if(g_lpGPUPoly == NULL)
 		g_lpGPUPoly = new GPUPoly();
 	g_lpGPUPoly->setBlob(blob);
 	g_lpGPUPoly->setCellSize(g_appSettings.cellsize);
