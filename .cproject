@@ -28,15 +28,16 @@
 								<option id="gnu.cpp.compiler.exe.debug.option.debugging.level.1724159955" name="Debug Level" superClass="gnu.cpp.compiler.exe.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.321305271" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/3rdparty}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src}&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/local/cuda/include"/>
 									<listOptionValue builtIn="false" value="&quot;${CPP_LIBS}/loki/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${CPP_LIBS}/tbb/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${CPP_LIBS}/board/include&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.preprocessor.def.507236850" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="SIMD_USE_M256"/>
+									<listOptionValue builtIn="false" value="SIMD_USE_M128"/>
 								</option>
-								<option id="gnu.cpp.compiler.option.other.other.1062548481" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -march=corei7-avx -mtune=corei7-avx" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.other.other.1062548481" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -std=c++11" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.2012971091" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1626364066" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug">
@@ -48,6 +49,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.2006898358" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
 								<option id="gnu.cpp.link.option.libs.1404592045" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="pthread"/>
+									<listOptionValue builtIn="false" value="crypto"/>
 									<listOptionValue builtIn="false" value="dl"/>
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="tbb"/>
@@ -104,12 +106,13 @@
 								<option id="gnu.cpp.compiler.exe.release.option.debugging.level.1744605204" name="Debug Level" superClass="gnu.cpp.compiler.exe.release.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.759257603" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/3rdparty}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src}&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/local/cuda/include"/>
 									<listOptionValue builtIn="false" value="&quot;${CPP_LIBS}/loki/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${CPP_LIBS}/tbb/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${CPP_LIBS}/board/include&quot;"/>
 								</option>
-								<option id="gnu.cpp.compiler.option.other.other.1739156283" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -march=corei7-avx -mtune=corei7-avx" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.other.other.1739156283" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -std=c++11 -march=corei7-avx -mtune=corei7-avx" valueType="string"/>
 								<option id="gnu.cpp.compiler.option.preprocessor.def.1949638972" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="SIMD_USE_M256"/>
 								</option>
@@ -124,6 +127,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.release.38216711" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.release">
 								<option id="gnu.cpp.link.option.libs.256326523" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="pthread"/>
+									<listOptionValue builtIn="false" value="crypto"/>
 									<listOptionValue builtIn="false" value="dl"/>
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="tbb"/>
@@ -173,5 +177,12 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/ParsipSimd"/>
+		</configuration>
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/ParsipSimd"/>
+		</configuration>
+	</storageModule>
 </cproject>

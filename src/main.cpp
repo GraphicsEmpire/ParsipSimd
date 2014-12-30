@@ -1,34 +1,28 @@
 // ParsipCmd.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
 #include <map>
+#include <assert.h>
 
-#ifdef WIN32
-	#include <time.h>
-#endif
-
-#include "GL/glew.h"
-#include "GL/freeglut.h"
-
-#include "PS_PolyMemManager.h"
-
-#include "PS_ArcBallCamera.h"
-#include "PS_ReadSceneModel.h"
-#include "PS_GNUPLOT_Driver.h"
-#include "PS_GLFuncs.h"
+#include "graphics/selectgl.h"
+#include "graphics/ArcBallCamera.h"
+#include "graphics/GLFuncs.h"
 
 #include "tbb/task_scheduler_init.h"
 #include "tbb/tick_count.h"
 #include "sqlite/sqlite3.h"
 
-#include "PS_SIMDVecN.h"
-#include "PS_CPU_INFO.h"
-#include "PS_OclPolygonizer.h"
-#include "PS_Charts.h"
+#include "base/DebugUtils.h"
+#include "base/SIMDVecN.h"
+#include "base/ProcessorInfo.h"
+#include "implicit/OclPolygonizer.h"
+#include "implicit/PolyMemManager.h"
+#include "implicit/ReadSceneModel.h"
 
-#include "AA_Models/PS_DebugUtils.h"
-#include <assert.h>
+#include "db.h"
+#include "plot.h"
+
+
 
 
 #define WINDOW_SIZE_WIDTH 1024
@@ -103,32 +97,31 @@ const char* g_lpFragShaderCode =
 
 //Global Vars
 ProcessorInfo g_cpuInfo;
-PS::CArcBallCamera	g_arcBallCam;
+PS::ArcBallCamera	g_arcBallCam;
 APPSETTINGS g_appSettings;
 GLuint g_uiShader;
 
 //All Polygonizer data
 SimdPoly      g_cpuPoly;
-PS::HPC::GPUPoly g_gpuPoly;
+PS::SKETCH::GPUPoly* g_lpGPUPoly = NULL;
 
 GLuint 		  g_textureId;
-svec2f		  g_pan;
+vec2f		  g_pan;
 
 tbb::task_scheduler_init* g_taskSchedular = NULL;
 
 //Graphics Functions
-void DrawBox(const svec3f& lo, const svec3f& hi, const svec3f& color, float lineWidth = 1.0f);
 void DrawPolygonizerOutput(const PolyMPUs& polyMPUs);
 
 //Performs an optimized SIMD polygonization and rendering
-bool Run_CPUPoly(const std::string& strModelFP);
+bool Run_CPUPoly(const AnsiStr& strModelFP);
 
 //Runs OpenCL GPU polygonizer
-bool Run_GPUPoly(const std::string& strModelFP);
+bool Run_GPUPoly(const AnsiStr& strModelFP);
 
 //GLUT CallBacks
 void Close();
-void Display();
+void Draw();
 void Resize(int w, int h);
 void Keyboard(int key, int x, int y);
 void MousePress(int button, int state, int x, int y);
@@ -158,33 +151,6 @@ bool sqlite_InsertUtilRecord(const char* chrDBPath,
 							 int idxFastestCore, int idxSlowestCore);
 
 //////////////////////////////////////////////////////////////////////////
-
-void DrawBox(const svec3f& lo, const svec3f& hi, const svec3f& color, float lineWidth)
-{
-	float l = lo.x; float r = hi.x;
-	float b = lo.y; float t = hi.y;
-	float n = lo.z; float f = hi.z;
-
-	GLfloat vertices [][3] = {{l, b, f}, {l, t, f}, {r, t, f},
-							  {r, b, f}, {l, b, n}, {l, t, n},
-							  {r, t, n}, {r, b, n}};
-
-	glPushAttrib(GL_ALL_ATTRIB_BITS);
-		glColor3f(color.x, color.y, color.z);
-		glLineWidth(lineWidth);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glBegin(GL_QUADS);
-			glVertex3fv(vertices[0]); glVertex3fv(vertices[3]); glVertex3fv(vertices[2]); glVertex3fv(vertices[1]);
-			glVertex3fv(vertices[4]); glVertex3fv(vertices[5]); glVertex3fv(vertices[6]); glVertex3fv(vertices[7]);
-			glVertex3fv(vertices[3]); glVertex3fv(vertices[0]); glVertex3fv(vertices[4]); glVertex3fv(vertices[7]);
-			glVertex3fv(vertices[1]); glVertex3fv(vertices[2]); glVertex3fv(vertices[6]); glVertex3fv(vertices[5]);
-			glVertex3fv(vertices[2]); glVertex3fv(vertices[3]); glVertex3fv(vertices[7]); glVertex3fv(vertices[6]);
-			glVertex3fv(vertices[5]); glVertex3fv(vertices[4]); glVertex3fv(vertices[0]); glVertex3fv(vertices[1]);
-		glEnd();
-	glPopAttrib();
-}
-
-
 void DrawPolygonizerOutput(const PolyMPUs& polyMPUs)
 {
 	if(polyMPUs.countWorkUnits() == 0) return;
@@ -227,14 +193,14 @@ void DrawPolygonizerOutput(const PolyMPUs& polyMPUs)
 
 				for(U32 j=0; j<polyMPUs.lpMPUs[i].ctVertices; j++)
 				{
-					svec3f v = svec3f(polyMPUs.globalMesh.vPos[szVertexPart + j*3],
+					vec3f v = vec3f(polyMPUs.globalMesh.vPos[szVertexPart + j*3],
 									  polyMPUs.globalMesh.vPos[szVertexPart + j*3 + 1],
 									  polyMPUs.globalMesh.vPos[szVertexPart + j*3 + 2]);
-					svec3f n = svec3f(polyMPUs.globalMesh.vNorm[szVertexPart + j*3],
+					vec3f n = vec3f(polyMPUs.globalMesh.vNorm[szVertexPart + j*3],
 									  polyMPUs.globalMesh.vNorm[szVertexPart + j*3 + 1],
 									  polyMPUs.globalMesh.vNorm[szVertexPart + j*3 + 2]);
 
-					svec3f e = vadd3f(v, vscale3f(0.5f, n));
+					vec3f e = vec3f::add(v, vec3f::mul(0.5f, n));
 
 					glBegin(GL_LINES);
 					glVertex3f(v.x, v.y, v.z);
@@ -247,7 +213,7 @@ void DrawPolygonizerOutput(const PolyMPUs& polyMPUs)
 	}
 }
 
-void Display()
+void Draw()
 {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	glLoadIdentity();
@@ -278,8 +244,8 @@ void Display()
 	}
 	else
 	{
-		svec3f p = g_arcBallCam.getCoordinates();
-		svec3f c = g_arcBallCam.getCenter();
+		vec3f p = g_arcBallCam.getPos();
+		vec3f c = g_arcBallCam.getCenter();
 
 
 		glTranslatef(g_pan.x, g_pan.y, 0.0f);
@@ -297,8 +263,12 @@ void Display()
 		//Draw Mesh
 		glUseProgram(g_uiShader);
 
-		if(g_appSettings.bRenderGPU)
-			g_gpuPoly.drawMesh(g_appSettings.bDrawWireFrame);
+		if(g_appSettings.bRenderGPU) {
+			if(g_lpGPUPoly) {
+				g_lpGPUPoly->setWireFrameMode(g_appSettings.bDrawWireFrame);
+				g_lpGPUPoly->draw();
+			}
+		}
 		else
 		{
 			g_cpuPoly.drawMesh(g_appSettings.bDrawWireFrame);
@@ -316,17 +286,17 @@ void Display()
 
 			if(g_appSettings.bModelBox)
 			{
-				DrawBox(g_cpuPoly.getBlobPrims()->bboxLo, g_cpuPoly.getBlobPrims()->bboxHi, svec3f(1.0f, 0.0f, 0.0f));
+				DrawAABB(g_cpuPoly.getBlobPrims()->bboxLo, g_cpuPoly.getBlobPrims()->bboxHi, vec3f(1.0f, 0.0f, 0.0f));
 			}
 
 			if(g_appSettings.bOpBoxes)
 			{
 				for(U32 i=0; i<g_cpuPoly.getBlobOps()->count; i++)
 				{
-					svec3f lo = svec3f(g_cpuPoly.getBlobOps()->bboxLoX[i], g_cpuPoly.getBlobOps()->bboxLoY[i], g_cpuPoly.getBlobOps()->bboxLoZ[i]);
-					svec3f hi = svec3f(g_cpuPoly.getBlobOps()->bboxHiX[i], g_cpuPoly.getBlobOps()->bboxHiY[i], g_cpuPoly.getBlobOps()->bboxHiZ[i]);
+					vec3f lo = vec3f(g_cpuPoly.getBlobOps()->bboxLoX[i], g_cpuPoly.getBlobOps()->bboxLoY[i], g_cpuPoly.getBlobOps()->bboxLoZ[i]);
+					vec3f hi = vec3f(g_cpuPoly.getBlobOps()->bboxHiX[i], g_cpuPoly.getBlobOps()->bboxHiY[i], g_cpuPoly.getBlobOps()->bboxHiZ[i]);
 
-					DrawBox(lo, hi, svec3f(1.0f, 1.0f, 0.0));
+					DrawAABB(lo, hi, vec3f(1.0f, 1.0f, 0.0));
 				}
 			}
 
@@ -334,10 +304,10 @@ void Display()
 			{
 				for(U32 i=0; i<g_cpuPoly.getBlobPrims()->count; i++)
 				{
-					svec3f lo = svec3f(g_cpuPoly.getBlobPrims()->bboxLoX[i], g_cpuPoly.getBlobPrims()->bboxLoY[i], g_cpuPoly.getBlobPrims()->bboxLoZ[i]);
-					svec3f hi = svec3f(g_cpuPoly.getBlobPrims()->bboxHiX[i], g_cpuPoly.getBlobPrims()->bboxHiY[i], g_cpuPoly.getBlobPrims()->bboxHiZ[i]);
+					vec3f lo = vec3f(g_cpuPoly.getBlobPrims()->bboxLoX[i], g_cpuPoly.getBlobPrims()->bboxLoY[i], g_cpuPoly.getBlobPrims()->bboxLoZ[i]);
+					vec3f hi = vec3f(g_cpuPoly.getBlobPrims()->bboxHiX[i], g_cpuPoly.getBlobPrims()->bboxHiY[i], g_cpuPoly.getBlobPrims()->bboxHiZ[i]);
 
-					DrawBox(lo, hi, svec3f(0.0f, 1.0f, 0.0));
+					DrawAABB(lo, hi, vec3f(0.0f, 1.0f, 0.0));
 				}
 			}
 
@@ -346,10 +316,10 @@ void Display()
 				float cpm = (float)(GRID_DIM - 1);
 				for(U32 i=0; i<g_cpuPoly.getMPUs()->countWorkUnits(); i++)
 				{
-					svec3f lo = g_cpuPoly.getMPUs()->lpMPUs[i].bboxLo;
-					svec3f hi = vadd3f(lo, vscale3f(g_appSettings.cellsize, svec3f(cpm, cpm, cpm)));
+					vec3f lo = g_cpuPoly.getMPUs()->lpMPUs[i].bboxLo;
+					vec3f hi = vec3f::add(lo, vec3f::mul(g_appSettings.cellsize, vec3f(cpm, cpm, cpm)));
 
-					DrawBox(lo, hi, svec3f(0.0f, 0.0f, 1.0));
+					DrawAABB(lo, hi, vec3f(0.0f, 0.0f, 1.0));
 				}
 			}
 
@@ -408,13 +378,13 @@ void Keyboard(int key, int x, int y)
 	else if(key == GLUT_KEY_F9)
 	{
 		g_appSettings.UtilizationWidthPercentFromEnd -= 0.1f;
-		Clampf(g_appSettings.UtilizationWidthPercentFromEnd, 0.0f, 1.0f);
+		Clamp<float>(g_appSettings.UtilizationWidthPercentFromEnd, 0.0f, 1.0f);
 		printf("Util width set = %.2f \n", g_appSettings.UtilizationWidthPercentFromEnd);
 	}
 	else if(key == GLUT_KEY_F10)
 	{
 		g_appSettings.UtilizationWidthPercentFromEnd += 0.1f;
-		Clampf(g_appSettings.UtilizationWidthPercentFromEnd, 0.0f, 1.0f);
+		Clamp<float>(g_appSettings.UtilizationWidthPercentFromEnd, 0.0f, 1.0f);
 		printf("Util width set = %.2f \n", g_appSettings.UtilizationWidthPercentFromEnd);
 	}
 	else if(key == GLUT_KEY_F11)
@@ -431,9 +401,9 @@ void Keyboard(int key, int x, int y)
 void MousePress(int button, int state, int x, int y)
 {
 	if(state == GLUT_DOWN)
-		g_arcBallCam.mousePress((PS::CArcBallCamera::MOUSEBUTTONSTATE)button, x, y);
+		g_arcBallCam.mousePress(button, state, x, y);
 	else
-		g_arcBallCam.mousePress(PS::CArcBallCamera::mbMiddle, x, y);
+		g_arcBallCam.mousePress(PS::ArcBallCamera::mbMiddle, state, x, y);
 }
 
 void MouseMove(int x, int y)
@@ -442,7 +412,7 @@ void MouseMove(int x, int y)
 	{
 		g_pan.x += (x - g_arcBallCam.getLastPos().x) * 0.03f;
 		g_pan.y += (g_arcBallCam.getLastPos().y - y) * 0.03f;
-		g_arcBallCam.setLastPos(svec2i(x, y));
+		g_arcBallCam.setLastPos(vec2i(x, y));
 	}
 	else
 		g_arcBallCam.mouseMove(x, y);
@@ -539,7 +509,7 @@ bool sqlite_InsertLogRecord(const char* chrDBPath, const char* lpStrModelName,
 		msPolyTotal = (t1 - t0).seconds() * 1000.0;
 		msPolyTotal /= (double)g_appSettings.attempts;
 		double fps = (msPolyTotal != 0.0)? 1000.0 / msPolyTotal : 1000.0;
-		svec3i dim = g_cpuPoly.getMPUs()->getWorkDim();
+		vec3i dim = g_cpuPoly.getMPUs()->getWorkDim();
 		printf("Processed %d MPUs [%d, %d, %d] TIME=%.2f, FPS=%.2f. Avg [FE=%.2f, Tri=%.2f]\n",
 				(int)ctWorkUnits, dim.x, dim.y, dim.z, msPolyTotal, fps, msPolyAvgFieldEvals, msPolyAvgTriangulate);
 	}
@@ -759,7 +729,7 @@ int main(int argc, char* argv[])
 	printf("CacheLine:%u [B]\n", g_cpuInfo.cache_line_size);
 	for(int i=0; i<g_cpuInfo.ctCacheInfo; i++)
 	{
-		if(g_cpuInfo.cache_types[i] != ctNone)
+		if(g_cpuInfo.cache_types[i] != ProcessorInfo::ctNone)
 		{
 			printf("\tLevel:%d, Type:%s, Size:%u [KB]\n",
 					g_cpuInfo.cache_levels[i],
@@ -768,7 +738,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	printf("**********************************************************************************\n");
-	std::string strModelFP;
+	AnsiStr strModelFP;
 	memset(&g_appSettings, 0, sizeof(APPSETTINGS));
 	g_appSettings.attempts = 1;
 	g_appSettings.cellsize = DEFAULT_CELL_SIZE;
@@ -828,7 +798,7 @@ int main(int argc, char* argv[])
 
 		if(std::strcmp(strArg.c_str(), "-f") == 0)
 		{
-			strModelFP = argv[i+1];
+			strModelFP = AnsiStr(argv[i+1]);
 		}
 
 		if(std::strcmp(strArg.c_str(), "-t") == 0)
@@ -919,8 +889,8 @@ int main(int argc, char* argv[])
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	glutInitWindowSize(WINDOW_SIZE_WIDTH, WINDOW_SIZE_HEIGHT);
-	glutCreateWindow("Parsip Cmd - Cache Optimized Scalable Polygonizer for Skeletal Implicit Surfaces");
-	glutDisplayFunc(Display);
+	glutCreateWindow("ParsipSIMD - Cache Optimized SIMD Scalable Polygonizer for Skeletal Implicit Surfaces");
+	glutDisplayFunc(Draw);
 	glutReshapeFunc(Resize);
 	glutMouseFunc(MousePress);
 	glutMotionFunc(MouseMove);
@@ -973,18 +943,14 @@ int main(int argc, char* argv[])
 		//For Debugging only
 		if(g_appSettings.bRoot)
 		{
-			DAnsiStr strFilePath =  ExtractOneLevelUp(ExtractFilePath(GetExePath()));
-			strFilePath += DAnsiStr(strModelFP.c_str());
-			strModelFP = std::string(strFilePath.c_str());			
+			AnsiStr strFilePath =  ExtractOneLevelUp(ExtractFilePath(GetExePath()));
+			strFilePath += AnsiStr(strModelFP.c_str());
+			strModelFP = strFilePath;
 		}
 	}
 
 	//Render CPU or GPU renderer
-	bool bPolyRes = false;
-	if(g_appSettings.bRenderGPU)
-		bPolyRes = Run_GPUPoly(strModelFP);
-	else
-		bPolyRes = Run_CPUPoly(strModelFP);
+	bool bPolyRes = Run_CPUPoly(strModelFP);
 
 	if(bPolyRes)
 		glutMainLoop();
@@ -993,22 +959,31 @@ int main(int argc, char* argv[])
 }
 
 //GPU Polygonizer
-bool Run_GPUPoly(const std::string& strModelFP)
+bool Run_GPUPoly(const AnsiStr& strModelFP)
 {
 	printf("Start GPU OpenCL polygonizer: [cellsize = %.2f] [attempts = %u]\n", g_appSettings.cellsize, g_appSettings.attempts);
-	if(!g_gpuPoly.readModel(strModelFP.c_str()))
+	LinearBlobTree blob;
+	if(!blob.load(strModelFP))
 	{
 		printf("ERROR: Invalid input model!\n");
 		return false;
 	}
+
 	printf("Using Input model %s.\n", strModelFP.c_str());
-	g_gpuPoly.run(g_appSettings.cellsize);
+
+	if(g_lpGPUPoly)
+		g_lpGPUPoly = new GPUPoly();
+	g_lpGPUPoly->setBlob(blob);
+	g_lpGPUPoly->setCellSize(g_appSettings.cellsize);
+	g_lpGPUPoly->run();
+
 	glutPostRedisplay();
+
 	return true;
 }
 
 //GPU MultiCore Polygonizer with SIMD instructions
-bool Run_CPUPoly(const std::string& strModelFP)
+bool Run_CPUPoly(const AnsiStr& strModelFP)
 {
 	string strModelName;
 
@@ -1022,7 +997,7 @@ bool Run_CPUPoly(const std::string& strModelFP)
 
 	printf("Using Input model %s.\n", strModelFP.c_str());
 	g_cpuPoly.printModelInfo();
-	strModelName = string(PS::FILESTRINGUTILS::ExtractFileName(DAnsiStr(strModelFP.c_str())).cptr());
+	strModelName = string(PS::FILESTRINGUTILS::ExtractFileName(AnsiStr(strModelFP.c_str())).cptr());
 	//////////////////////////////////////////////////////////////////////////
 	//Print all used memory
 	U32 szWorkItemMem, szTotalMem, szLLC;
@@ -1054,7 +1029,7 @@ bool Run_CPUPoly(const std::string& strModelFP)
 	{
 		using namespace PS::FILESTRINGUTILS;
 		strExePath = (string)GetExePath().cptr();
-		strLogFP = (string)(ExtractFilePath(GetExePath()) + DAnsiStr("PerformanceLog.db")).cptr();
+		strLogFP = (string)(ExtractFilePath(GetExePath()) + AnsiStr("PerformanceLog.db")).cptr();
 		sqlite_CreateTableIfNotExist(strLogFP.c_str(), g_cpuInfo.ctCores);
 	}
 
@@ -1077,9 +1052,9 @@ bool Run_CPUPoly(const std::string& strModelFP)
 			printf("Parsip CMD - CellSize Param set to %.2f. \n", g_appSettings.cellsize);
 
 			g_appSettings.bReady = g_cpuPoly.prepareBBoxes(g_appSettings.cellsize);
-			svec3i dim = g_cpuPoly.getMPUs()->getWorkDim();
-			svec3f lo = g_cpuPoly.getBlobPrims()->bboxLo;
-			svec3f hi = g_cpuPoly.getBlobPrims()->bboxHi;
+			vec3i dim = g_cpuPoly.getMPUs()->getWorkDim();
+			vec3f lo = g_cpuPoly.getBlobPrims()->bboxLo;
+			vec3f hi = g_cpuPoly.getBlobPrims()->bboxHi;
 			printf("WorkGrid=[%d, %d, %d], BoxLo=[%.3f %.3f %.3f], BoxHi=[%.3f %.3f %.3f]\n",
 					dim.x, dim.y, dim.z,
 					lo.x, lo.y, lo.z,
@@ -1160,9 +1135,9 @@ bool Run_CPUPoly(const std::string& strModelFP)
 
 
 //Clean up
-void Close()
-{
-	g_gpuPoly.cleanup();
+void Close() {
+	SAFE_DELETE(g_lpGPUPoly);
+
 	g_cpuPoly.cleanup();
 	SAFE_DELETE(g_taskSchedular);
 	//Delete Texture
@@ -1181,7 +1156,7 @@ void ProduceUsageChartAsTexture(const char* chrDBPath,
 	//FrameBuffer and Render Buffer Object Ids
 	GLuint fboId;
 	GLuint rboId;
-	Clampf(offsetPercentFromEnd, 0.0f, 1.0f);
+	Clamp<float>(offsetPercentFromEnd, 0.0f, 1.0f);
 
 	//Generate FrameBuffer
 	glGenFramebuffers(1, &fboId);
@@ -1322,7 +1297,7 @@ void ProduceUsageChartAsTexture(const char* chrDBPath,
 
 
 			double wTimeUnit = WINDOW_SIZE_WIDTH / wTime;
-			Clampd(wTimeUnit, 0.0f, WINDOW_SIZE_WIDTH);
+			Clamp<double>(wTimeUnit, 0.0f, WINDOW_SIZE_WIDTH);
 
 			double hTimeUnit = (WINDOW_SIZE_HEIGHT / (double)ctThreads);
 			double hTimeStack = 0.75 * hTimeUnit;
@@ -1364,7 +1339,7 @@ void ProduceUsageChartAsTexture(const char* chrDBPath,
 
 			//3. Write All Text Strings
 			double hTimeStackHalf = hTimeStack * 0.5;
-			svec4f black(1.0f, 1.0f, 1.0f, 1.0f);
+			vec4f black = Color::black().toVec4f();
 			void* font = GLUT_BITMAP_8_BY_13;
 			char buffer[1024];
 
@@ -1376,7 +1351,7 @@ void ProduceUsageChartAsTexture(const char* chrDBPath,
 
 			double tt = (t1 - t0).seconds() * 1000.0;
 			sprintf(buffer, "Total Processed %u, Crossed %d, Fastest %d, Slowest %d, PolyT %.2f ms", polyMPUs.countWorkUnits(), ctIntersected, idxFastestThread + 1, idxLatestThread + 1, tt);
-			DrawString(buffer, 5, WINDOW_SIZE_HEIGHT - 20, &black.x, font);
+			DrawString(buffer, 5, WINDOW_SIZE_HEIGHT - 20, black.ptr(), font);
 			for(int i=0; i<ctThreads; i++)
 			{
 				float ratio = (statsThreadProcessed[i] != 0)? (float)(statsThreadCrossed[i] * 100.0f) / (float)statsThreadProcessed[i] : 0.0f;
