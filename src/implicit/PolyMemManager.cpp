@@ -9,20 +9,15 @@
 
 #include <vector>
 #include <GL/glew.h>
+#include <tbb/cache_aligned_allocator.h>
+
+using namespace tbb;
 
 namespace PS{
 namespace SIMDPOLY{
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-void MESH_BUFFER_OBJECTS::cleanup()
-{
-	if(bIsValid)
-	{
-		glDeleteBuffers(1, &vboVertex);
-		glDeleteBuffers(1, &vboColor);
-		glDeleteBuffers(1, &vboNormal);
-		glDeleteBuffers(1, &iboFaces);
-		bIsValid = false;
-	}
+
+U64 MakeSIMDPadSize(U64 sz) {
+	return (((U64)(sz) + (PS_SIMD_FLEN-1)) & ~(PS_SIMD_FLEN-1));
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -34,7 +29,7 @@ void PolyMPUs::init()
 	m_ctWorkUnits = 0;
 }
 
-bool PolyMPUs::allocate(const vec3i& workDim)
+bool PolyMPUs::allocate(const vec3i& workDim, const MPUDim& mpuDim)
 {
 	U32 ctNeeded = workDim.x * workDim.y * workDim.z;
 	this->m_workDim = workDim;
@@ -49,15 +44,18 @@ bool PolyMPUs::allocate(const vec3i& workDim)
 
 	lpMPUs = AllocAligned<MPU>(ctNeeded);
 
-	U32 szPerComponent = PS_SIMD_PADSIZE(MPU_MESHPART_VERTEX_STRIDE * ctNeeded);
-	//void* lpVertexMemBlock = AllocAligned(szPerComponent * 3);
-	//globalMesh.vPos = reinterpret_cast<float*>((U64)m_lpMemBlock + sizeof(SOABlobPrims));
-	globalMesh.vColor = AllocAligned<float>(szPerComponent);
-	globalMesh.vNorm  = AllocAligned<float>(szPerComponent);
-	globalMesh.vPos   = AllocAligned<float>(szPerComponent);
 
-	U32 szPerTriangle = PS_SIMD_PADSIZE(MPU_MESHPART_TRIANGLE_STRIDE * ctNeeded);
-	globalMesh.vTriangles = AllocAligned<U16>(szPerTriangle);
+
+	globalMesh.mpuMeshVertexStrideF = MakeSIMDPadSize(mpuDim.countCells() * MAX_VERTICES_OUTPUT_PER_CELL * 3);
+	globalMesh.mpuMeshTriangleStrideU32 = MakeSIMDPadSize(mpuDim.countCells() * MAX_TRIANGLES_OUTPUT_PER_CELL * 3);
+
+	globalMesh.globalMeshVertexBufferSizeF = PS_SIMD_PADSIZE(globalMesh.mpuMeshVertexStrideF * ctNeeded);
+	globalMesh.globalMeshTriangleBufferSizeU32 = PS_SIMD_PADSIZE(globalMesh.mpuMeshTriangleStrideU32 * ctNeeded);
+
+	globalMesh.vColor = tbb::cache_aligned_allocator<float>().allocate(globalMesh.globalMeshVertexBufferSizeF);
+	globalMesh.vNorm  = tbb::cache_aligned_allocator<float>().allocate(globalMesh.globalMeshVertexBufferSizeF);
+	globalMesh.vPos   = tbb::cache_aligned_allocator<float>().allocate(globalMesh.globalMeshVertexBufferSizeF);
+	globalMesh.vTriangles = tbb::cache_aligned_allocator<U32>().allocate(globalMesh.globalMeshTriangleBufferSizeU32);
 
 	m_ctAllocated = ctNeeded;
 	return true;
@@ -91,13 +89,19 @@ void PolyMPUs::cleanup()
 	FreeAligned(lpMPUs);
 	lpMPUs = 0;
 
-	FreeAligned(globalMesh.vColor);
-	FreeAligned(globalMesh.vNorm);
-	FreeAligned(globalMesh.vPos);
-	FreeAligned(globalMesh.vTriangles);
+	if(globalMesh.vPos)
+		tbb::cache_aligned_allocator<float>().deallocate(globalMesh.vPos, globalMesh.globalMeshVertexBufferSizeF);
+	if(globalMesh.vColor)
+		tbb::cache_aligned_allocator<float>().deallocate(globalMesh.vColor, globalMesh.globalMeshVertexBufferSizeF);
+	if(globalMesh.vNorm)
+		tbb::cache_aligned_allocator<float>().deallocate(globalMesh.vNorm, globalMesh.globalMeshVertexBufferSizeF);
+	if(globalMesh.vTriangles)
+		tbb::cache_aligned_allocator<U32>().deallocate(globalMesh.vTriangles, globalMesh.globalMeshTriangleBufferSizeU32);
+
+
+	globalMesh.vPos = NULL;
 	globalMesh.vColor = NULL;
 	globalMesh.vNorm = NULL;
-	globalMesh.vPos = NULL;
 	globalMesh.vTriangles = NULL;
 
 	m_ctAllocated = 0;
@@ -106,10 +110,25 @@ void PolyMPUs::cleanup()
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-SimdPoly::SimdPoly()
+SimdPoly::SimdPoly(): SGMesh()
 {
+	m_lpBlobOps = NULL;
+	m_lpBlobPrims = NULL;
+	m_lpMtxBox = NULL;
+	m_lpMtxNode = NULL;
+
 	m_lpMemBlock = NULL;
 	m_szInputData = 0;
+}
+
+SimdPoly::~SimdPoly() {
+	cleanup();
+}
+
+void SimdPoly::cleanup() {
+	FreeAligned(m_lpMemBlock);
+	m_lpMemBlock = NULL;
+	m_polyMPUs.cleanup();
 }
 
 bool SimdPoly::readModel(const char* lpFilePath)
@@ -168,25 +187,46 @@ void SimdPoly::allocate()
 	m_lpMtxBox = reinterpret_cast<SOABlobBoxMatrices*>((U64)m_lpMtxNode + sizeof(SOABlobNodeMatrices));
 }
 
-void SimdPoly::cleanup()
+
+//Returns the count of needed MPUs
+vec3i SimdPoly::CountMPUNeeded(const MPUDim& mpuDim, float cellsize, const vec3f& lo, const vec3f& hi)
 {
-	printf("Free memory for input Blobtree.\n");
-	FreeAligned(m_lpMemBlock);
-	m_lpMemBlock = NULL;
-	m_polyMPUs.cleanup();
-	m_outputMesh.cleanup();
+	const int cellsPerMPU = mpuDim.dim() - 1;
+
+	vec3f allSides = vec3f::sub(hi, lo);
+	vec3i ctCellsNeeded;
+	vec3i ctMPUNeeded;
+
+	ctCellsNeeded.x = static_cast<int>(ceil(allSides.x / cellsize));
+	ctCellsNeeded.y = static_cast<int>(ceil(allSides.y / cellsize));
+	ctCellsNeeded.z = static_cast<int>(ceil(allSides.z / cellsize));
+
+	ctMPUNeeded.x = ctCellsNeeded.x / cellsPerMPU;
+	ctMPUNeeded.y = ctCellsNeeded.y / cellsPerMPU;
+	ctMPUNeeded.z = ctCellsNeeded.z / cellsPerMPU;
+	if (ctCellsNeeded.x % cellsPerMPU != 0)
+		ctMPUNeeded.x++;
+	if (ctCellsNeeded.y % cellsPerMPU != 0)
+		ctMPUNeeded.y++;
+	if (ctCellsNeeded.z % cellsPerMPU != 0)
+		ctMPUNeeded.z++;
+
+	return ctMPUNeeded;
 }
 
 //Bounding Boxes computation and MPU Allocation
-int SimdPoly::prepareBBoxes(float cellsize)
+int SimdPoly::prepareBBoxes(float cellsize, U8 mpuDim)
 {
+	//setup dimensions
+	m_mpuDim.set(mpuDim);
+
 	vec3f opBoxLo, opBoxHi;
 	int res = PrepareAllBoxes(*m_lpBlobOps, *m_lpBlobPrims, *m_lpMtxBox);
 
 	//Prepare MPUs Needed for processing
-	vec3i dim = CountMPUNeeded(cellsize, m_lpBlobPrims->bboxLo, m_lpBlobPrims->bboxHi);
-	m_polyMPUs.allocate(dim);
-	m_polyMPUs.setLowerVertex(m_lpBlobPrims->bboxLo, (GRID_DIM - 1)* cellsize);
+	vec3i workGridDim = CountMPUNeeded(m_mpuDim, cellsize, m_lpBlobPrims->bboxLo, m_lpBlobPrims->bboxHi);
+	m_polyMPUs.allocate(workGridDim, mpuDim);
+	m_polyMPUs.setLowerVertex(m_lpBlobPrims->bboxLo, (m_mpuDim.dim() - 1)* cellsize);
 
 	return res;
 }
@@ -204,6 +244,7 @@ int SimdPoly::polygonize(float cellsize, bool bScalarRun, MPUSTATS* lpProcessSta
 					  *m_lpMtxNode,
 					  m_polyMPUs.countWorkUnits(),
 					  m_polyMPUs.lpMPUs,
+					  m_mpuDim,
 					  &m_polyMPUs.globalMesh,
 					  lpProcessStats);
 }
@@ -215,14 +256,18 @@ bool SimdPoly::extractSingleMeshObject()
 	if(ctMPUs == 0)
 		return false;
 
-	//Cleanup previous mesh
-	m_outputMesh.cleanup();
+	vector<U32> arrVertexCount;
+	arrVertexCount.resize(ctMPUs);
 
-	U32* arrVertexCount = new U32[ctMPUs];
-	U32* arrFaceCount = new U32[ctMPUs];
+	vector<U32> arrVertexCountScanned;
+	arrVertexCountScanned.resize(ctMPUs + 1);
 
-	U32* arrVertexCountScanned = new U32[ctMPUs + 1];
-	U32* arrFaceCountScanned = new U32[ctMPUs + 1];
+	vector<U32> arrFaceCount;
+	arrFaceCount.resize(ctMPUs);
+
+	vector<U32> arrFaceCountScanned;
+	arrFaceCountScanned.resize(ctMPUs + 1);
+
 
 	//Scan Arrays of Vertices Count and Faces Count
 	for(U32 i=0; i < ctMPUs; i++)
@@ -240,73 +285,60 @@ bool SimdPoly::extractSingleMeshObject()
 		arrFaceCountScanned[i] = arrFaceCountScanned[i - 1] + arrFaceCount[i - 1];
 	}
 
-	U32 ctTriangles = m_outputMesh.ctTriangles = arrFaceCountScanned[ctMPUs];
-	U32 ctVertices = m_outputMesh.ctVertices = arrVertexCountScanned[ctMPUs];
-	float* arrVertices = new float[ctVertices * 3];
-	float* arrNormals  = new float[ctVertices * 3];
-	float* arrColors   = new float[ctVertices * 3];
-	U32* arrFaces = new U32[ctTriangles * 3];
+	U32 ctTriangles = arrFaceCountScanned[ctMPUs];
+	U32 ctVertices = arrVertexCountScanned[ctMPUs];
+
+	//Mesh components
+	vector<float> arrVertices;
+	vector<float> arrNormals;
+	vector<float> arrColors;
+	arrVertices.resize(ctVertices * 3);
+	arrNormals.resize(ctVertices * 3);
+	arrColors.resize(ctVertices * 3);
+
+	vector<U32> arrFaces;
+	arrFaces.resize(ctTriangles * 3);
+
+	const U32 mpuMeshVertexStrideF = m_polyMPUs.globalMesh.mpuMeshVertexStrideF;
+	const U32 mpuMeshTriangleStrideU32 = m_polyMPUs.globalMesh.mpuMeshTriangleStrideU32;
 
 	for(U32 i=0; i < ctMPUs; i++)
 	{
 		if(arrVertexCount[i] > 0)
 		{
-			memcpy(&arrVertices[arrVertexCountScanned[i] * 3], &m_polyMPUs.globalMesh.vPos[i * MPU_MESHPART_VERTEX_STRIDE], sizeof(float) * 3 * arrVertexCount[i]);
-			memcpy(&arrColors[arrVertexCountScanned[i] * 3], &m_polyMPUs.globalMesh.vColor[i * MPU_MESHPART_VERTEX_STRIDE], sizeof(float) * 3 * arrVertexCount[i]);
-			memcpy(&arrNormals[arrVertexCountScanned[i] * 3], &m_polyMPUs.globalMesh.vNorm[i * MPU_MESHPART_VERTEX_STRIDE], sizeof(float) * 3 * arrVertexCount[i]);
+			memcpy(&arrVertices[arrVertexCountScanned[i] * 3], &m_polyMPUs.globalMesh.vPos[i * mpuMeshVertexStrideF], sizeof(float) * 3 * arrVertexCount[i]);
+			memcpy(&arrColors[arrVertexCountScanned[i] * 3], &m_polyMPUs.globalMesh.vColor[i * mpuMeshVertexStrideF], sizeof(float) * 3 * arrVertexCount[i]);
+			memcpy(&arrNormals[arrVertexCountScanned[i] * 3], &m_polyMPUs.globalMesh.vNorm[i * mpuMeshVertexStrideF], sizeof(float) * 3 * arrVertexCount[i]);
 
 			U32 offsetFace = arrFaceCountScanned[i] * 3;
 			U32 offsetVertex = arrVertexCountScanned[i];
 			U32 jMax = arrFaceCount[i]*3;
 			for(U32 j=0; j<jMax; j++)
 			{
-				arrFaces[offsetFace + j] = m_polyMPUs.globalMesh.vTriangles[i * MPU_MESHPART_TRIANGLE_STRIDE + j] + offsetVertex;
+				arrFaces[offsetFace + j] = m_polyMPUs.globalMesh.vTriangles[i * mpuMeshTriangleStrideU32 + j] + offsetVertex;
 			}
 		}
 	}
 
-
-
-
 	//Buffers
-	glGenBuffers(1, &m_outputMesh.vboVertex);
-	glBindBuffer(GL_ARRAY_BUFFER, m_outputMesh.vboVertex);
-	glBufferData(GL_ARRAY_BUFFER, ctVertices*3 * sizeof(float), arrVertices, GL_DYNAMIC_DRAW);
-
-	glGenBuffers(1, &m_outputMesh.vboColor);
-	glBindBuffer(GL_ARRAY_BUFFER, m_outputMesh.vboColor);
-	glBufferData(GL_ARRAY_BUFFER, ctVertices*3 * sizeof(float), arrColors, GL_DYNAMIC_DRAW);
-
-	glGenBuffers(1, &m_outputMesh.vboNormal);
-	glBindBuffer(GL_ARRAY_BUFFER, m_outputMesh.vboNormal);
-	glBufferData(GL_ARRAY_BUFFER, ctVertices*3 * sizeof(float), arrNormals, GL_DYNAMIC_DRAW);
+	SGMesh::cleanup();
+	setupVertexAttribs(arrVertices, 3, gbtPosition);
+	setupVertexAttribs(arrColors, 3, gbtColor);
+	setupVertexAttribs(arrNormals, 3, gbtNormal);
+	setupFaceIndexBuffer(arrFaces, GLFaceType::ftTriangles);
 
 
-	glGenBuffers(1, &m_outputMesh.iboFaces);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_outputMesh.iboFaces);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, ctTriangles *3 * sizeof(U32), arrFaces, GL_DYNAMIC_DRAW);
-
-
-	m_outputMesh.bIsValid = true;
-
-	SAFE_DELETE(arrVertexCount);
-	SAFE_DELETE(arrFaceCount);
-	SAFE_DELETE(arrVertexCountScanned);
-	SAFE_DELETE(arrFaceCountScanned);
-
-	SAFE_DELETE(arrColors);
-	SAFE_DELETE(arrVertices);
-	SAFE_DELETE(arrNormals);
-	SAFE_DELETE(arrFaces);
 	return 1;
-
 }
 
 void SimdPoly::drawMeshNormals()
 {
-	if(!m_outputMesh.bIsValid)	return;
+	if(!GLMeshBuffer::isBufferValid(gbtPosition)) return;
 
 	U32 ctMPUs = m_polyMPUs.countWorkUnits();
+
+	U32 mpuMeshVertexStrideF = m_polyMPUs.globalMesh.mpuMeshVertexStrideF;
+	//U32 mpuMeshTriangleStrideU32 = m_polyMPUs.globalMesh.mpuMeshTriangleStrideU32;
 
 	glPushAttrib(GL_ALL_ATTRIB_BITS);
 	glColor3f(0.0f, 0.0f, 1.0f);
@@ -319,8 +351,8 @@ void SimdPoly::drawMeshNormals()
 			for(U32 j=0; j<ctVertices; j++)
 			{
 				vec3f s, n, e;
-				s.load(&m_polyMPUs.globalMesh.vPos[i*MPU_MESHPART_VERTEX_STRIDE + j*3]);
-				n.load(&m_polyMPUs.globalMesh.vNorm[i*MPU_MESHPART_VERTEX_STRIDE + j*3]);
+				s.load(&m_polyMPUs.globalMesh.vPos[i*mpuMeshVertexStrideF + j*3]);
+				n.load(&m_polyMPUs.globalMesh.vNorm[i*mpuMeshVertexStrideF + j*3]);
 				e = vec3f::add(s, vec3f::mul(0.3f, n));
 
 				glVertex3f(s.x, s.y, s.z);
@@ -334,65 +366,7 @@ void SimdPoly::drawMeshNormals()
 	glPopAttrib();
 }
 
-void SimdPoly::drawMesh(bool bDrawWireFrame)
-{
-	if(!m_outputMesh.bIsValid)	return;
 
-	glPushAttrib(GL_ALL_ATTRIB_BITS);
-	if(bDrawWireFrame)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	else
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_outputMesh.vboColor);
-	glColorPointer(3, GL_FLOAT, 0, 0);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_outputMesh.vboNormal);
-	glNormalPointer(GL_FLOAT, 0, 0);
-	glEnableClientState(GL_NORMAL_ARRAY);
-
-	glBindBuffer(GL_ARRAY_BUFFER, m_outputMesh.vboVertex);
-	glVertexPointer(3, GL_FLOAT, 0, 0);
-	glEnableClientState(GL_VERTEX_ARRAY);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_outputMesh.iboFaces);
-	glEnableClientState(GL_ELEMENT_ARRAY_BUFFER);
-
-	glDrawElements(GL_TRIANGLES, (GLsizei)m_outputMesh.ctTriangles * 3, GL_UNSIGNED_INT, (GLvoid*)0);
-
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_ELEMENT_ARRAY_BUFFER);
-
-	glPopAttrib();
-}
-
-
-int SimdPoly::measureQuality() const
-{
-	/*
-	std::vector<float> arrMinNormalAngle;
-	std::vector<float> arrMaxNormalAngle;
-	std::vector<float> arrAvgNormalAngle;
-
-	U32 ctTriangles = 0;
-	U32 ctVertices = 0;
-	for(U32 i=0; i<m_polyMPUs.ctUsed; i++)
-	{
-		ctTriangles += m_polyMPUs.lpMPUs[i].ctTriangles;
-		ctVertices += m_polyMPUs.lpMPUs[i].ctVertices;
-	}
-
-	for(U32 i=0; i<m_polyMPUs.ctUsed; i++)
-	{
-		m_polyMPUs.lpMPUs[i].triangles
-	}
-	*/
-	return 0;
-}
 
 
 

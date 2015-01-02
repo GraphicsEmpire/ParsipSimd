@@ -25,7 +25,10 @@ void ProcessorInfo::getAllInfo()
 {
 	this->ctCores = tbb::task_scheduler_init::default_num_threads();
 	this->cache_line_size  = GetCacheLineSize();
-	this->bSupportAVX 	   = SimdDetectFeature(AVXFlag);
+	this->bSupportAVX = __builtin_cpu_supports("avx");
+	this->bSupportAVX2 = __builtin_cpu_supports("avx2");
+
+	//this->bSupportAVX 	   = SimdDetectFeature(AVXFlag);
 	this->bOSSupportAVX    = SimdDetectFeature(OSXSAVEFlag);
 	if(bSupportAVX)
 		this->simd_float_lines = 8;

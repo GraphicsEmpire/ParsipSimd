@@ -5,14 +5,16 @@
  *      Author: pourya
  */
 #include "sqlite/CppSQLite3.h"
-#include "base/FileDirectory.h"
 #include <iostream>
 #include <stdio.h>
 #include <Board.h>
+
+#include "base/FileDirectory.h"
 #include "db.h"
 
 using namespace std;
 using namespace LibBoard;
+
 using namespace PS::SIMDPOLY;
 
 void GetExePath(char *exePath, int szBuffer)
@@ -105,7 +107,8 @@ bool sqlite_CreateTableIfNotExist(const char* chrDBPath, int ctProcessorCores)
 		return false;
 	}
 
-	const char *strSQL1 = "CREATE TABLE IF NOT EXISTS tblPerfLog(xpID INTEGER PRIMARY KEY AUTOINCREMENT, xpModelName VARCHAR(30), xpTime DATETIME, ctPrims int, ctOps int, cellSize float, "
+	const char *strSQL1 = "CREATE TABLE IF NOT EXISTS tblPerfLog(xpID INTEGER PRIMARY KEY AUTOINCREMENT, xpModelName VARCHAR(30), xpTime DATETIME, "
+						 "ctPrims int, ctOps int, mpuDim int, cellSize float, "
 						 "ctGroupsTotal int, ctMPUTotal int, ctMPUIntersected int, ctTotalFieldEvals int, ctLatestMPUFieldEvals int, ctFVEPT int, "
 						 "ctMeshFaces int, ctMeshVertices int, msPolyTotal double, msPolyFieldEvals double, msPolyTriangulate double, "
 						 "ctThreads smallint, ctSIMDLength smallint, szWorkItemMem int, szTotalMemUsage int, szLastLevelCache int);";
@@ -243,7 +246,7 @@ bool chart_CreateStackChart(int xpID,
 		double HEIGHT = ctThreads * 80.0;
 
 		Board board1;
-		board1.clear(Color(255, 255, 255));
+		board1.clear(LibBoard::Color(255, 255, 255));
 		board1.drawRectangle(0, 0, WIDTH, HEIGHT, 1.0f);
 
 		double wTimeUnit = WIDTH / (t1 - t0).seconds();
@@ -256,14 +259,14 @@ bool chart_CreateStackChart(int xpID,
 		//2.Draw a quad per each MPU (Crossed Blue, Non-Crossed RED)
 		U32 ctWorkUnits = polyMPUs.countWorkUnits();
 
-		Color clRectPen(0,0,0);
-		Color clRectFill;
+		LibBoard::Color clRectPen(0,0,0);
+		LibBoard::Color clRectFill;
 		for(U32 i=0; i < ctWorkUnits; i++)
 		{
 			if(lpMPUStats[i].bIntersected)
-				clRectFill = Color(0, 0, 255);
+				clRectFill = LibBoard::Color(0, 0, 255);
 			else
-				clRectFill = Color(255, 0, 0);
+				clRectFill = LibBoard::Color(255, 0, 0);
 
 			double xStart = (lpMPUStats[i].tickStart - t0).seconds() * wTimeUnit;
 			double yStart = -1.0f * (ctThreads - lpMPUStats[i].idxThread - 1) * hTimeUnit - hGap;
@@ -292,7 +295,7 @@ bool chart_CreateStackChart(int xpID,
 
 			double y = -1.0f * (ctThreads - i - 1) * hTimeUnit - hGap/2;
 
-			board1 << Text(20, y, string(buffer), Fonts::CourierBold, 4, Color::Black );
+			board1 << Text(20, y, string(buffer), Fonts::CourierBold, 4, LibBoard::Color::Black );
 			bool bDetailed = false;
 			if(bDetailed)
 			{
@@ -301,7 +304,7 @@ bool chart_CreateStackChart(int xpID,
 						(float)(statsThreadCrossedTime[i] * 1000.0) /(float)statsThreadCrossed[i],
 						(float)(statsThreadEmptyTime[i] * 1000.0) / (float)statsThreadEmpty[i],
 						(float)(statsThreadProcessed[i]) / (float)avgWork);
-				board1 << Text(20, i * hTimeUnit + hTimeStackHalf - 12, string(buffer), Fonts::CourierBold, 4, Color::Black );
+				board1 << Text(20, i * hTimeUnit + hTimeStackHalf - 12, string(buffer), Fonts::CourierBold, 4, LibBoard::Color::Black );
 			}
 		}
 
@@ -318,7 +321,7 @@ bool chart_CreateStackChart(int xpID,
 		double HEIGHT = MATHMAX(100.0, 25.0 * ctThreads);
 
 		Board board2;
-		board2.clear(Color(255, 255, 255));
+		board2.clear(LibBoard::Color(255, 255, 255));
 		board2.drawRectangle(0, 0, WIDTH, HEIGHT, 1.0f);
 
 		double hTimeUnit = HEIGHT / (t1 - t0).seconds();
@@ -342,31 +345,31 @@ bool chart_CreateStackChart(int xpID,
 			//Draw Crossed in Blue
 			{
 				double dif = hCrossed - hFieldEvals;
-				board2 << LibBoard::Rectangle(i * wUnit + wGap, -hEmpty - hIdle, wUnitBar, hCrossed, Color(0,0,0), Color(0,0,255), 0.01);
-				board2 << LibBoard::Rectangle(i * wUnit + wGap, -hEmpty - hIdle - dif, wUnitBar, hFieldEvals, Color(0,0,0), Color(0,0,128), 0.01);
+				board2 << LibBoard::Rectangle(i * wUnit + wGap, -hEmpty - hIdle, wUnitBar, hCrossed, LibBoard::Color(0,0,0), LibBoard::Color(0,0,255), 0.01);
+				board2 << LibBoard::Rectangle(i * wUnit + wGap, -hEmpty - hIdle - dif, wUnitBar, hFieldEvals, LibBoard::Color(0,0,0), LibBoard::Color(0,0,128), 0.01);
 			}
 
 			sprintf(buffer, "%.0f ms/%u", statsThreadCrossedTime[i] * 1000.0, statsThreadCrossed[i]);
-			board2 << LibBoard::Text(i * wUnit + wGap, - hIdle - hEmpty - hCrossed / 2, string(buffer), Fonts::CourierBold, 6, Color::Black );
+			board2 << LibBoard::Text(i * wUnit + wGap, - hIdle - hEmpty - hCrossed / 2, string(buffer), Fonts::CourierBold, 6, LibBoard::Color::Black );
 			//sprintf(buffer, "%.0f ms", statsThreadCrossedTime[i] * 1000.0);
 			//board2 << Text(i * wUnit + wGap, - hIdle - hEmpty - hCrossed / 2 - 20, string(buffer), Fonts::CourierBold, 6, Color::Black );
 
 
 			//Draw Empty in Red
-			board2 << LibBoard::Rectangle(i * wUnit + wGap, -hIdle, wUnitBar, hEmpty, Color(0,0,0), Color(255, 0, 0), 0.01);
+			board2 << LibBoard::Rectangle(i * wUnit + wGap, -hIdle, wUnitBar, hEmpty, LibBoard::Color(0,0,0), LibBoard::Color(255, 0, 0), 0.01);
 			sprintf(buffer, "%.0f ms/%u", statsThreadEmptyTime[i]*1000.0, statsThreadEmpty[i]);
-			board2 << LibBoard::Text(i * wUnit + wGap, -hIdle - hEmpty / 2, string(buffer), Fonts::CourierBold, 6, Color::Black );
+			board2 << LibBoard::Text(i * wUnit + wGap, -hIdle - hEmpty / 2, string(buffer), Fonts::CourierBold, 6, LibBoard::Color::Black );
 			//sprintf(buffer, "%.0f ms", statsThreadEmptyTime[i] * 1000.0);
 			//board2 << Text(i * wUnit + wGap, - hIdle - hEmpty / 2 - 20, string(buffer), Fonts::CourierBold, 6, Color::Black );
 
 
 			//Draw Idle in Gray
-			board2 << LibBoard::Rectangle(i * wUnit + wGap, 0, wUnitBar, hIdle, Color(0,0,0), Color(128, 128, 128), 0.01);
+			board2 << LibBoard::Rectangle(i * wUnit + wGap, 0, wUnitBar, hIdle, LibBoard::Color(0,0,0), LibBoard::Color(128, 128, 128), 0.01);
 			sprintf(buffer, "%.0f ms", tsIdle * 1000.0);
-			board2 << LibBoard::Text(i * wUnit + wGap, -hIdle / 2, string(buffer), Fonts::CourierBold, 6, Color::Black );
+			board2 << LibBoard::Text(i * wUnit + wGap, -hIdle / 2, string(buffer), Fonts::CourierBold, 6, LibBoard::Color::Black );
 
 			sprintf(buffer, "T%d", i+1);
-			board2 << LibBoard::Text(i * wUnit + wGap, -HEIGHT + wGap, string(buffer), Fonts::CourierBold, 6, Color::White );
+			board2 << LibBoard::Text(i * wUnit + wGap, -HEIGHT + wGap, string(buffer), Fonts::CourierBold, 6, LibBoard::Color::White );
 		}
 
 		sprintf(buffer, "%s/graphs/CoreVertUsageXP%d.eps", chrFilePath, xpID);

@@ -441,10 +441,10 @@ void CMPUProcessor::process_cells_fieldsimd_cellparallel_oldedgeAccess(const Fie
 					//FieldValue computed using SIMD
 					fc.fieldValue(cellCornerPOSX_, cellCornerPOSY_, cellCornerPOSZ_, arrField);
 
-					//arrField.store(&fvCache[CELLID_FROM_IDX(i,j, k*PS_SIMD_FLEN)]);
+					//arrField.store(&fvCache[m_mpuDim.hash(i,j, k*PS_SIMD_FLEN)]);
 					for(int iSimd=0; iSimd<PS_SIMD_FLEN; iSimd++)
 					{
-						fvCache[CELLID_FROM_IDX(i,j, (k*PS_SIMD_FLEN) + iSimd)] = arrField[iSimd];
+						fvCache[m_mpuDim.hash(i,j, (k*PS_SIMD_FLEN) + iSimd)] = arrField[iSimd];
 					}
 
 
@@ -483,28 +483,28 @@ void CMPUProcessor::process_cells_fieldsimd_cellparallel_oldedgeAccess(const Fie
 				vec3i cellCornerIDX[8];
 				float cellCornerField[8];
 
-				cellCornerKey[0] = CELLID_FROM_IDX(i, j, k);
+				cellCornerKey[0] = m_mpuDim.hash(i, j, k);
 				cellCornerIDX[0] = vec3i(i, j, k);
 
-				cellCornerKey[1] = CELLID_FROM_IDX(i, j, k+1);
+				cellCornerKey[1] = m_mpuDim.hash(i, j, k+1);
 				cellCornerIDX[1] = vec3i(i, j, k+1);
 
-				cellCornerKey[2] = CELLID_FROM_IDX(i, j+1, k);
+				cellCornerKey[2] = m_mpuDim.hash(i, j+1, k);
 				cellCornerIDX[2] = vec3i(i, j+1, k);
 
-				cellCornerKey[3] = CELLID_FROM_IDX(i, j+1, k+1);
+				cellCornerKey[3] = m_mpuDim.hash(i, j+1, k+1);
 				cellCornerIDX[3] = vec3i(i, j+1, k+1);
 
-				cellCornerKey[4] = CELLID_FROM_IDX(i+1, j, k);
+				cellCornerKey[4] = m_mpuDim.hash(i+1, j, k);
 				cellCornerIDX[4] = vec3i(i+1, j, k);
 
-				cellCornerKey[5] = CELLID_FROM_IDX(i+1, j, k+1);
+				cellCornerKey[5] = m_mpuDim.hash(i+1, j, k+1);
 				cellCornerIDX[5] = vec3i(i+1, j, k+1);
 
-				cellCornerKey[6] = CELLID_FROM_IDX(i+1, j+1, k);
+				cellCornerKey[6] = m_mpuDim.hash(i+1, j+1, k);
 				cellCornerIDX[6] = vec3i(i+1, j+1, k);
 
-				cellCornerKey[7] = CELLID_FROM_IDX(i+1, j+1, k+1);
+				cellCornerKey[7] = m_mpuDim.hash(i+1, j+1, k+1);
 				cellCornerIDX[7] = vec3i(i+1, j+1, k+1);
 
 				//Compute Cell Config
@@ -1077,16 +1077,17 @@ void CMPUProcessor::process_cells_fieldsimd_cellserial_newedgeAccess(const Field
 }
 */
 
-void CMPUProcessor::process_cells_scalar(const FieldComputer& fc, MPU& mpu, MPUGLOBALMESH& globalMesh, tbb::tick_count& tickFieldEvals) const
+void CMPUProcessor::process_cells_scalar(EdgeTable& edgeTable,
+										 const FieldComputer& fc, MPU& mpu,
+										 MPUGLOBALMESH& globalMesh, tbb::tick_count& tickFieldEvals) const
 {
 	//Create Field-Value Cache and init it
 	//const size_t m = GRID_DIM * GRID_DIM * PS_SIMD_BLOCKS(GRID_DIM);
-	const size_t m = GRID_DIM * GRID_DIM * GRID_DIM;
+	const size_t m = m_mpuDim.dim3();
 	float fvCache[m];
 
 	//EdgeTable
-	EDGETABLE edgeTable;
-	memset(&edgeTable, 0, sizeof(EDGETABLE));
+	edgeTable.reset(m_mpuDim);
 	int idxCellConfig = 0;
 
 	mpu.ctFieldEvals = 0;
@@ -1098,11 +1099,11 @@ void CMPUProcessor::process_cells_scalar(const FieldComputer& fc, MPU& mpu, MPUG
 		int ctOutside = 0;
 
 		//Cache all field-values with in this MPU
-		for(int i=0; i<GRID_DIM; i++)
+		for(int i=0; i < m_mpuDim.dim(); i++)
 		{
-			for(int j=0; j<GRID_DIM; j++)
+			for(int j=0; j < m_mpuDim.dim(); j++)
 			{
-				for(int k=0; k<GRID_DIM; k++)
+				for(int k=0; k < m_mpuDim.dim(); k++)
 				{
 					Float_ cellCornerPOSX_(mpu.bboxLo.x + i*m_cellsize);
 					Float_ cellCornerPOSY_(mpu.bboxLo.y + j*m_cellsize);
@@ -1113,7 +1114,7 @@ void CMPUProcessor::process_cells_scalar(const FieldComputer& fc, MPU& mpu, MPUG
 					//FieldValue computed using SIMD
 					fc.fieldValue(cellCornerPOSX_, cellCornerPOSY_, cellCornerPOSZ_, arrField);
 
-					fvCache[CELLID_FROM_IDX(i,j,k)] = arrField[0];
+					fvCache[m_mpuDim.hash(i,j,k)] = arrField[0];
 
 					//Keep stats
 					mpu.ctFieldEvals++;
@@ -1139,46 +1140,49 @@ void CMPUProcessor::process_cells_scalar(const FieldComputer& fc, MPU& mpu, MPUG
 
 
 	//
-	U16* lpMeshTriangles = &globalMesh.vTriangles[mpu.idxGlobalID * MPU_MESHPART_TRIANGLE_STRIDE];
-	U32 szVertexPartOffset = mpu.idxGlobalID * MPU_MESHPART_VERTEX_STRIDE;
+	const U32 mpuMeshVertexStrideF = globalMesh.mpuMeshVertexStrideF;
+	const U32 mpuMeshTriangleStrideU32 = globalMesh.mpuMeshTriangleStrideU32;
+
+	U32* lpMeshTriangles = &globalMesh.vTriangles[mpu.idxGlobalID * mpuMeshTriangleStrideU32];
+	U32 szVertexPartOffset = mpu.idxGlobalID * mpuMeshVertexStrideF;
 	float* lpMeshVertices = &globalMesh.vPos[szVertexPartOffset];
 	float* lpMeshNormals = &globalMesh.vNorm[szVertexPartOffset];
 	float* lpMeshColors = &globalMesh.vColor[szVertexPartOffset];
 
 	/////////////////////////////////////////////////////////////////////////
 	//Process all cells in this MPU
-	for(int i=0; i<GRID_DIM-1; i++)
+	for(int i=0; i<m_mpuDim.dim()-1; i++)
 	{
-		for(int j=0; j<GRID_DIM-1; j++)
+		for(int j=0; j<m_mpuDim.dim()-1; j++)
 		{
-			for(int k=0; k<GRID_DIM-1; k++)
+			for(int k=0; k<m_mpuDim.dim()-1; k++)
 			{
 				int	cellCornerKey[8];
 				vec3i cellCornerIDX[8];
 				float cellCornerField[8];
 
-				cellCornerKey[0] = CELLID_FROM_IDX(i, j, k);
+				cellCornerKey[0] = m_mpuDim.hash(i, j, k);
 				cellCornerIDX[0] = vec3i(i, j, k);
 
-				cellCornerKey[1] = CELLID_FROM_IDX(i, j, k+1);
+				cellCornerKey[1] = m_mpuDim.hash(i, j, k+1);
 				cellCornerIDX[1] = vec3i(i, j, k+1);
 
-				cellCornerKey[2] = CELLID_FROM_IDX(i, j+1, k);
+				cellCornerKey[2] = m_mpuDim.hash(i, j+1, k);
 				cellCornerIDX[2] = vec3i(i, j+1, k);
 
-				cellCornerKey[3] = CELLID_FROM_IDX(i, j+1, k+1);
+				cellCornerKey[3] = m_mpuDim.hash(i, j+1, k+1);
 				cellCornerIDX[3] = vec3i(i, j+1, k+1);
 
-				cellCornerKey[4] = CELLID_FROM_IDX(i+1, j, k);
+				cellCornerKey[4] = m_mpuDim.hash(i+1, j, k);
 				cellCornerIDX[4] = vec3i(i+1, j, k);
 
-				cellCornerKey[5] = CELLID_FROM_IDX(i+1, j, k+1);
+				cellCornerKey[5] = m_mpuDim.hash(i+1, j, k+1);
 				cellCornerIDX[5] = vec3i(i+1, j, k+1);
 
-				cellCornerKey[6] = CELLID_FROM_IDX(i+1, j+1, k);
+				cellCornerKey[6] = m_mpuDim.hash(i+1, j+1, k);
 				cellCornerIDX[6] = vec3i(i+1, j+1, k);
 
-				cellCornerKey[7] = CELLID_FROM_IDX(i+1, j+1, k+1);
+				cellCornerKey[7] = m_mpuDim.hash(i+1, j+1, k+1);
 				cellCornerIDX[7] = vec3i(i+1, j+1, k+1);
 
 				//Compute Cell Config
@@ -1209,9 +1213,8 @@ void CMPUProcessor::process_cells_scalar(const FieldComputer& fc, MPU& mpu, MPUG
 						{
 							int idxEdgeStart = corner1[candidate];
 							int idxEdgeEnd 	 = corner2[candidate];
-							idxMeshVertex[icase] = getEdge(edgeTable,
-									cellCornerIDX[idxEdgeStart],
-									cellCornerIDX[idxEdgeEnd]);
+							idxMeshVertex[icase] = edgeTable.getEdge(cellCornerIDX[idxEdgeStart],
+														   	   	     cellCornerIDX[idxEdgeEnd]);
 
 							//See if the vertex exist in edge table. If it doesn't exist compute and add it to edge table
 							if(idxMeshVertex[icase] == -1)
@@ -1263,7 +1266,7 @@ void CMPUProcessor::process_cells_scalar(const FieldComputer& fc, MPU& mpu, MPUG
 
 								//Get vertex v index from list. It is the last one
 								idxMeshVertex[icase] = idxVertex;
-								setEdge(edgeTable, cellCornerIDX[idxEdgeStart], cellCornerIDX[idxEdgeEnd], idxVertex);
+								edgeTable.setEdge(cellCornerIDX[idxEdgeStart], cellCornerIDX[idxEdgeEnd], idxVertex);
 							}
 							ctEdges++;
 						}

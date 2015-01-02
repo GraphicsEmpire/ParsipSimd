@@ -111,6 +111,7 @@ public:
 	U8 ctCores;
 	U8 simd_float_lines;
 	bool bSupportAVX;
+	bool bSupportAVX2;
 	bool bSupportSSE;
 	bool bOSSupportAVX;
 

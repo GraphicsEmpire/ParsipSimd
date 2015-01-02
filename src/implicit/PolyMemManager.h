@@ -7,28 +7,15 @@
 
 #ifndef PS_POLYMEMMANAGER_H_
 #define PS_POLYMEMMANAGER_H_
+
 #include "Polygonizer.h"
+#include "graphics/SGMesh.h"
+
+using namespace PS::SG;
+using namespace PS::GL;
 
 namespace PS{
 namespace SIMDPOLY{
-
-//Vertex Buffer Objects To Draw
-struct MESH_BUFFER_OBJECTS{
-	//Index to the buffer objects
-	U32 vboVertex;
-	U32 vboColor;
-	U32 vboNormal;
-	U32 iboFaces;
-
-	//Count
-	U32 ctTriangles;
-	U32 ctVertices;
-
-	bool bIsValid;
-
-	//releases all buffer objects for rendering
-	void cleanup();
-};
 
 
 //Structure Holding Polygonization Partition Units
@@ -38,19 +25,18 @@ public:
 	~PolyMPUs() {cleanup();}
 
 	void init();
-	bool allocate(const vec3i& workDim);
+	bool allocate(const vec3i& workDim, const MPUDim& mpuDim);
 	void cleanup();
 
 	int setLowerVertex(const vec3f& start, float mpuSide);
-
-	//U32 memUsage() const
 
 	vec3i getWorkDim() const {return m_workDim;}
 	U32 countWorkUnits() const {return m_ctWorkUnits;}
 private:
 	U32 m_ctAllocated;
-	vec3i m_workDim;
 	U32 m_ctWorkUnits;
+	vec3i m_workDim;
+
 
 public:
 	MPU* lpMPUs;
@@ -59,13 +45,13 @@ public:
 
 
 //SimdPoly
-class SimdPoly{
+class SimdPoly : public SGMesh {
 public:
 	SimdPoly();
-	~SimdPoly() {cleanup();}
+	virtual ~SimdPoly();
 
-	void allocate();
 	void cleanup();
+	void allocate();
 	void printModelInfo();
 	//void printBBoxInfo();
 
@@ -78,6 +64,8 @@ public:
 	 */
 	void createRandomSpheresModel(U32 ctSpheres);
 
+	static vec3i CountMPUNeeded(const MPUDim& mpuDim, float cellsize, const vec3f& lo, const vec3f& hi);
+
 	/*!
 	 * Prepares bounding boxes of all primitives and operators in the BlobTree.
 	 * Compute the union of all primitive bounding boxes as the model BBox.
@@ -85,7 +73,7 @@ public:
 	 * @param cellsize the cubic cell size for polygonization
 	 * @return success or an error code
 	 */
-	int prepareBBoxes(float cellsize);
+	int prepareBBoxes(float cellsize, U8 mpuDim);
 
 	/*!
 	 * Polygonizes a BlobTree model using SIMD optimized polygonizer and records all
@@ -101,17 +89,9 @@ public:
 	//Produces Single Mesh vertex and element buffer objects
 	bool extractSingleMeshObject();
 
-	/*!
-	 * Draw the mesh using accelerated memory buffer objects in OpenGL
-	 * @param bDrawWireFrame if set draws in wireframe mode default is false
-	 */
-	void drawMesh(bool bDrawWireFrame = false);
-
 	//Draw Mesh Normals for Debug
 	void drawMeshNormals();
 
-
-	int measureQuality() const;
 
 	//Access
 	PolyMPUs* getMPUs() {return &m_polyMPUs;}
@@ -130,7 +110,7 @@ private:
 	SOABlobNodeMatrices* m_lpMtxNode;
 	SOABlobBoxMatrices* m_lpMtxBox;
 	PolyMPUs m_polyMPUs;
-	MESH_BUFFER_OBJECTS m_outputMesh;
+	MPUDim m_mpuDim;
 
 	void* m_lpMemBlock;
 	U32 m_szInputData;

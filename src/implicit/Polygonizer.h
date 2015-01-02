@@ -17,40 +17,13 @@ namespace SIMDPOLY{
 using namespace tbb;
 using namespace PS::MATHSIMD;
 
-#define GRID_DIM_16
-
-#ifdef GRID_DIM_32
-#define GRID_DIM 32
-#define CELLID_SHIFT_X 0
-#define CELLID_SHIFT_Y 5
-#define CELLID_SHIFT_Z 10
-#define CELLID_BITMASK 0x1F
-#endif
-
-#ifdef GRID_DIM_16
-#define GRID_DIM 16
-#define CELLID_SHIFT_X 0
-#define CELLID_SHIFT_Y 4
-#define CELLID_SHIFT_Z 8
-#define CELLID_BITMASK 0x0F
-#endif
-
-#ifdef GRID_DIM_8
-#define GRID_DIM 8
-#define CELLID_SHIFT_X 0
-#define CELLID_SHIFT_Y 3
-#define CELLID_SHIFT_Z 6
-#define CELLID_BITMASK 0x07
-#endif
+#define DEFAULT_MPU_DIM 8
 
 //Return codes
 #define RET_PARAM_ERROR -1
 #define RET_NOT_ENOUGH_MEM -2
 #define RET_INVALID_BVH -3
 #define RET_SUCCESS 1
-
-#define CELLID_HASHSIZE (size_t)(1<<(3*CELLID_SHIFT_Y))
-#define CELLID_FROM_IDX(i,j,k) ((((k) & CELLID_BITMASK) << CELLID_SHIFT_Z) | (((j) & CELLID_BITMASK) << CELLID_SHIFT_Y) | ((i) & CELLID_BITMASK))
 
 #define EDGETABLE_DEPTH 8
 
@@ -75,16 +48,12 @@ using namespace PS::MATHSIMD;
 
 #define MAX_BVH_DEPTH_TO_MPU 6
 
-//MPU
-//#define MAX_MPU_COUNT	90000
-#define MAX_MPU_VERTEX_COUNT 512
-#define MAX_MPU_TRIANGLE_COUNT 512
-
 //Strides
-#define MPU_MESHPART_VERTEX_STRIDE MAX_MPU_VERTEX_COUNT * 3
-#define MPU_MESHPART_TRIANGLE_STRIDE MAX_MPU_TRIANGLE_COUNT * 3
 #define MAX_THREADS_COUNT 128
 
+//Stats
+#define MAX_TRIANGLES_OUTPUT_PER_CELL 5
+#define MAX_VERTICES_OUTPUT_PER_CELL 15
 //////////////////////////////////////////////////////////
 enum CUBEFACES {cfLeft, cfRight, cfBottom, cfTop, cfNear, cfFar};
 
@@ -93,6 +62,63 @@ enum PrimitiveType {primPoint, primLine, primCylinder, primDisc, primRing, primC
 enum OperatorType {opUnion, opIntersect, opDif, opSmoothDif, opBlend, opRicciBlend, opGradientBlend, opFastQuadricPointSet,
 				   opCache, opWarpTwist, opWarpTaper, opWarpBend, opWarpShear};
 #endif
+
+//MPU Dimension
+class MPUDim {
+public:
+	MPUDim(U8 dim_ = 8) {
+		set(dim_);
+	}
+
+	MPUDim(const MPUDim& dim) {
+		set(dim.dim());
+	}
+
+	static bool isPowerOfTwo(U8 x) {
+		return (!(x == 0) && !(x & (x - 1)));
+	}
+
+	static bool isValid(U8 dim_) {
+		return (dim_ % 2 == 0);
+	}
+
+	void set(U8 dim_) {
+		assert(isValid(dim_));
+
+		m_dimension = dim_;
+		m_cellid_shift_x = 0;
+		m_cellid_shift_y = log2(dim_);
+		m_cellid_shift_z = m_cellid_shift_y * 2;
+		m_cellid_bitmask = dim_ - 1;
+	}
+
+	U64 hashsize() const {
+		return (U64)(1 << (3 * m_cellid_shift_y));
+	}
+
+	U64 hash(U32 x, U32 y, U32 z) const {
+		return ((((z) & m_cellid_bitmask) << m_cellid_shift_z) | (((y) & m_cellid_bitmask) << m_cellid_shift_y) | ((x) & m_cellid_bitmask));
+	}
+
+	U8 dim() const {return m_dimension;}
+	U64 dim3() const { return m_dimension * m_dimension * m_dimension;}
+	U64 countCells() const {
+		U8 d = m_dimension - 1;
+		return d * d * d;
+	}
+
+	U8 shiftX() const {return m_cellid_shift_x;}
+	U8 shiftY() const {return m_cellid_shift_y;}
+	U8 shiftZ() const {return m_cellid_shift_z;}
+	U8 mask() const {return m_cellid_bitmask;}
+private:
+	U8 m_dimension;
+	U8 m_cellid_shift_x;
+	U8 m_cellid_shift_y;
+	U8 m_cellid_shift_z;
+	U8 m_cellid_bitmask;
+
+};
 
 //Total Data Structure Per Each Core : Including Input BlobPrims, Ops, MPU mesh
 //Aligned SOA structure for primitives
@@ -214,14 +240,17 @@ struct PS_BEGIN_ALIGNED(PS_SIMD_FLEN) MPU{
 //Global Mesh Holds Mesh Data
 struct PS_BEGIN_ALIGNED(PS_SIMD_FLEN) MPUGLOBALMESH{
 	//Pos, norm and Color will be written to
-	//float vPos[PS_SIMD_PADSIZE(MAX_MPU_VERTEX_COUNT*3)];
-	//float vNorm[PS_SIMD_PADSIZE(MAX_MPU_VERTEX_COUNT*3)];
-	//float vColor[PS_SIMD_PADSIZE(MAX_MPU_VERTEX_COUNT*3)];
-	//U16	  triangles[PS_SIMD_PADSIZE(MAX_MPU_TRIANGLE_COUNT*3)];
 	float* vPos;
 	float* vNorm;
 	float* vColor;
-	U16* vTriangles;
+	U32* vTriangles;
+
+	//MPU vertex, triangle
+	U32 mpuMeshVertexStrideF;
+	U32 mpuMeshTriangleStrideU32;
+
+	U64 globalMeshVertexBufferSizeF;
+	U64 globalMeshTriangleBufferSizeU32;
 
 } PS_END_ALIGNED(PS_SIMD_FLEN);
 
@@ -238,17 +267,51 @@ struct MPUSTATS{
 
 //////////////////////////////////////////////////////////
 //SS = 5120
-struct EDGETABLE
+class EdgeTable
 {
+public:
+	EdgeTable();
+	virtual ~EdgeTable();
+
+	//memory management
+	void allocate(const MPUDim& mpuDim);
+	void cleanup();
+
+	void reset(const MPUDim& mpuDim);
+
+	//access to edges
+	int getEdge(int i, int j, int k, int edgeAxis) const;
+	void setEdge(int i, int j, int k, int edgeAxis, int vid) const;
+
+	int getEdge(vec3i& start, vec3i& end) const;
+	void setEdge(vec3i& start, vec3i& end, int vid) const;
+
+private:
+	void init();
+
+public:
 	//Check ctEdges to see if there is an edge associated with vertex s
-	U8 ctEdges[GRID_DIM * GRID_DIM * GRID_DIM];
+	U8* m_pEdgesCount;
 
 	//1 if corner (i,j,k) has edge with corners i+1, j+1, k+1
-	U8 hasEdgeWithHiNeighbor[GRID_DIM * GRID_DIM * GRID_DIM * 3];
+	U8* m_pHasEdgeWithHiNeighbor;
 
 	//Each internal vertex is connected to at most 6 others
 	//Each internal vertex has at most 3 adjacent vertices with higher address
-	U16 idxVertices[GRID_DIM * GRID_DIM * GRID_DIM * 3];
+	U16* m_pIndexVertices;
+
+	//MPU dimension
+	MPUDim m_mpuDim;
+
+//	//Check ctEdges to see if there is an edge associated with vertex s
+//	U8 ctEdges[GRID_DIM * GRID_DIM * GRID_DIM];
+//
+//	//1 if corner (i,j,k) has edge with corners i+1, j+1, k+1
+//	U8 hasEdgeWithHiNeighbor[GRID_DIM * GRID_DIM * GRID_DIM * 3];
+//
+//	//Each internal vertex is connected to at most 6 others
+//	//Each internal vertex has at most 3 adjacent vertices with higher address
+//	U16 idxVertices[GRID_DIM * GRID_DIM * GRID_DIM * 3];
 };
 
 //////////////////////////////////////////////////////////
@@ -404,16 +467,20 @@ private:
 class ThreadStartSetup : public tbb::task_scheduler_observer
 {
 public:
-	ThreadStartSetup(const SOABlobOps* lpOps,
+	ThreadStartSetup(const MPUDim& mpuDim,
+					 const SOABlobOps* lpOps,
 					 const SOABlobPrims* lpPrims,
 			  	  	 const SOABlobNodeMatrices* lpMatrices);
 
 
 	void on_scheduler_entry(bool is_worker);
+
+	void on_scheduler_exit(bool is_worker);
 private:
 	SOABlobOps* 	m_lpBlobOps;
 	SOABlobPrims* 	m_lpBlobPrims;
 	SOABlobNodeMatrices* m_lpBlobMatrices;
+	MPUDim m_mpuDim;
 };
 
 
@@ -424,12 +491,16 @@ class CMPUProcessor
 {
 public:
 	CMPUProcessor(float cellsize, bool bScalarRun,
-				  size_t ctMPUs, MPU* lpMPU, MPUGLOBALMESH* lpGlobalMesh, MPUSTATS* lpStats);
+				  U8 mpuDim, U32 ctMPUs, MPU* lpMPU,
+				  MPUGLOBALMESH* lpGlobalMesh, MPUSTATS* lpStats);
 
 	void operator()(const blocked_range<size_t>& range) const;
 
-	void process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLOBALMESH& globalMesh, tbb::tick_count& tickFieldEvals) const;
-	void process_cells_scalar(const FieldComputer& fc, MPU& mpu, MPUGLOBALMESH& globalMesh, tbb::tick_count& tickFieldEvals) const;
+	void process_cells_simd(EdgeTable& edgeTable, const FieldComputer& fc,
+							MPU& mpu, MPUGLOBALMESH& globalMesh, tbb::tick_count& tickFieldEvals) const;
+
+	void process_cells_scalar(EdgeTable& edgeTable, const FieldComputer& fc,
+							  MPU& mpu, MPUGLOBALMESH& globalMesh, tbb::tick_count& tickFieldEvals) const;
 	//void process_cells_fieldsimd_cellparallel_oldedgeAccess(const FieldComputer& fc, MPU& mpu, tbb::tick_count& tickFieldEvals) const;
 	//void process_cells_fieldsimd_cellserial_newedgeAccess(const FieldComputer& fc, MPU& mpu, tbb::tick_count& tickFieldEvals) const;
 	//void process_cells_continuation(const FieldComputer& fc, MPU& mpu) const;
@@ -440,18 +511,21 @@ private:
 	 * Get a vertex on an edge with the indices of one corner and its axis
 	 * (0=x,1=y and 2=z)
 	 */
-	int getEdge(const EDGETABLE& edgeTable , int i, int j, int k, int edgeAxis) const;
-	void setEdge(EDGETABLE& edgeTable , int i, int j, int k, int edgeAxis, int vid) const;
+	int getEdge(int i, int j, int k, int edgeAxis) const;
+	void setEdge(int i, int j, int k, int edgeAxis, int vid) const;
 
-	int getEdge(const EDGETABLE& edgeTable, vec3i& start, vec3i& end) const;
-	void setEdge(EDGETABLE& edgeTable, vec3i& start, vec3i& end, int vid) const;
+	int getEdge(vec3i& start, vec3i& end) const;
+	void setEdge(vec3i& start, vec3i& end, int vid) const;
 
 
 	bool discard(const FieldComputer& fc, MPU& mpu) const;
 private:
-	MPUSTATS* m_lpStats;
 	MPU* m_lpMPU;
+
+	MPUSTATS* m_lpStats;
 	MPUGLOBALMESH* m_lpGlobalMesh;
+	MPUDim m_mpuDim;
+
 
 	size_t m_ctMPUs;
 	float m_cellsize;
@@ -508,6 +582,7 @@ int Polygonize(float cellsize,
 			   const SOABlobNodeMatrices& blobMatrices,
 			   U32 ctMPUs,
 			   MPU* lpMPUs,
+			   const MPUDim& mpuDim,
 			   MPUGLOBALMESH* lpGlobalMesh,
 			   MPUSTATS* lpProcessStats = NULL);
 

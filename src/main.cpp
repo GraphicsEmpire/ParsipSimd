@@ -11,6 +11,7 @@
 #include "sqlite/sqlite3.h"
 
 #include "base/DebugUtils.h"
+#include "base/Logger.h"
 #include "base/SIMDVecN.h"
 #include "base/ProcessorInfo.h"
 #include "implicit/OclPolygonizer.h"
@@ -20,7 +21,7 @@
 #include "db.h"
 #include "plot.h"
 
-
+using namespace PS;
 
 
 #define WINDOW_SIZE_WIDTH 1024
@@ -46,11 +47,19 @@ struct APPSETTINGS{
 	bool bPanCamera;
 	bool bRenderGPU;
 
+	//cellSize
 	float cellsizeStart;
 	float cellsizeEnd;
 	float cellsizeStep;
 	float cellsize;
 
+	//gridDim
+	int mpuDimStart;
+	int mpuDimEnd;
+	int mpuDimStep;
+	MPUDim mpuDim;
+
+	//threads
 	int ctThreadCountStart;
 	int ctThreadCountEnd;
 	int ctThreads;
@@ -159,13 +168,16 @@ void DrawPolygonizerOutput(const PolyMPUs& polyMPUs)
 	else
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	const U32 mpuMeshVertexStrideF = polyMPUs.globalMesh.mpuMeshVertexStrideF;
+	const U32 mpuMeshTriangleStrideU32 = polyMPUs.globalMesh.mpuMeshTriangleStrideU32;
+
 	U32 ctWorkUnit = polyMPUs.countWorkUnits();
 	for (U32 i=0; i<ctWorkUnit; i++)
 	{
 		if(polyMPUs.lpMPUs[i].ctTriangles > 0)
 		{
-			U32 szVertexPart = i * MPU_MESHPART_VERTEX_STRIDE;
-			U32 szTrianglePart = i * MPU_MESHPART_TRIANGLE_STRIDE;
+			U32 szVertexPart = i * mpuMeshVertexStrideF;
+			U32 szTrianglePart = i * mpuMeshTriangleStrideU32;
 
 			//Color is RGB
 			glColorPointer(3, GL_FLOAT, 0, &polyMPUs.globalMesh.vColor[szVertexPart]);
@@ -254,7 +266,7 @@ void Draw()
 		if(g_appSettings.bInteractive)
 		{
 			bool bScalar = (g_appSettings.ctSIMDLength == 1);
-			g_appSettings.bReady = (g_cpuPoly.prepareBBoxes(g_appSettings.cellsize) == RET_SUCCESS);
+			g_appSettings.bReady = (g_cpuPoly.prepareBBoxes(g_appSettings.cellsize, g_appSettings.mpuDim.dim()) == RET_SUCCESS);
 			g_appSettings.bReady &= (g_cpuPoly.polygonize(g_appSettings.cellsize, bScalar, NULL) == RET_SUCCESS);
 			g_appSettings.bReady &= g_cpuPoly.extractSingleMeshObject();
 		}
@@ -270,7 +282,8 @@ void Draw()
 		}
 		else
 		{
-			g_cpuPoly.drawMesh(g_appSettings.bDrawWireFrame);
+			g_cpuPoly.setWireFrameMode(g_appSettings.bDrawWireFrame);
+			g_cpuPoly.draw();
 			if(g_appSettings.bDrawNormals)
 				g_cpuPoly.drawMeshNormals();
 		}
@@ -312,7 +325,7 @@ void Draw()
 
 			if(g_appSettings.bMPUBoxes)
 			{
-				float cpm = (float)(GRID_DIM - 1);
+				float cpm = (float)(g_appSettings.mpuDim.dim() - 1);
 				for(U32 i=0; i<g_cpuPoly.getMPUs()->countWorkUnits(); i++)
 				{
 					vec3f lo = g_cpuPoly.getMPUs()->lpMPUs[i].bboxLo;
@@ -537,10 +550,10 @@ bool sqlite_InsertLogRecord(const char* chrDBPath, const char* lpStrModelName,
 	U32 fvept = (ctMeshFaces > 0)? ctFieldEvals / ctMeshFaces : ctFieldEvals;
 
 	//////////////////////////////////////////////////////////
-	const char *strSQL = "INSERT INTO tblPerfLog (xpModelName, xpTime, ctPrims, ctOps, cellSize, ctGroupsTotal, ctMPUTotal, ctMPUIntersected, ctTotalFieldEvals, "
+	const char *strSQL = "INSERT INTO tblPerfLog (xpModelName, xpTime, ctPrims, ctOps, mpuDim, cellSize, ctGroupsTotal, ctMPUTotal, ctMPUIntersected, ctTotalFieldEvals, "
 						"ctLatestMPUFieldEvals, ctFVEPT, ctMeshFaces, ctMeshVertices, msPolyTotal, msPolyFieldEvals, msPolyTriangulate, "
 						"ctThreads, ctSIMDLength, szWorkItemMem, szTotalMemUsage, szLastLevelCache) values"
-						"(@xp_model_name, @xp_time, @ct_prims, @ct_ops, @cell_size, @ct_groups_total, @ct_mpu_total, @ct_mpu_intersected, @ct_total_fieldevals, "
+						"(@xp_model_name, @xp_time, @ct_prims, @ct_ops, @mpu_dim, @cell_size, @ct_groups_total, @ct_mpu_total, @ct_mpu_intersected, @ct_total_fieldevals, "
 						"@ct_lastestmpu_fieldevals, @ct_fvept, @ct_mesh_faces, @ct_mesh_vertices, @time_total, @time_fieldevals, @time_triangulate, "
 						"@ct_threads, @ct_simd_length, @sz_work_item_mem, @sz_total_mem_usage, @sz_last_level_cache);";
 
@@ -562,6 +575,9 @@ bool sqlite_InsertLogRecord(const char* chrDBPath, const char* lpStrModelName,
 
 	idxParam = sqlite3_bind_parameter_index(statement, "@ct_ops");
 	sqlite3_bind_int(statement, idxParam, g_cpuPoly.getBlobOps()->count);
+
+	idxParam = sqlite3_bind_parameter_index(statement, "@mpu_dim");
+	sqlite3_bind_int(statement, idxParam, g_appSettings.mpuDim.dim());
 
 	idxParam = sqlite3_bind_parameter_index(statement, "@cell_size");
 	sqlite3_bind_double(statement, idxParam, g_appSettings.cellsize);
@@ -744,8 +760,12 @@ int main(int argc, char* argv[])
 		printf("AVX supported.\n");
 	else
 		printf("AVX is not supported on this machine.\n");
+	if(g_cpuInfo.bSupportAVX2)
+		printf("AVX2 supported.\n");
+	else
+		printf("AVX2 is not supported on this machine.\n");
 
-	printf("Running Machine: CoresCount:%u, SIMD FLOATS:%u\n", g_cpuInfo.ctCores, g_cpuInfo.simd_float_lines);
+	printf("Machine: CoresCount:%u, SIMD FLOATS:%u\n", g_cpuInfo.ctCores, g_cpuInfo.simd_float_lines);
 	printf("CacheLine:%u [B]\n", g_cpuInfo.cache_line_size);
 	for(int i=0; i<g_cpuInfo.ctCacheInfo; i++)
 	{
@@ -765,6 +785,11 @@ int main(int argc, char* argv[])
 	g_appSettings.cellsizeStart = DEFAULT_CELL_SIZE;
 	g_appSettings.cellsizeEnd = DEFAULT_CELL_SIZE;
 	g_appSettings.cellsizeStep  = DEFAULT_CELL_SIZE;
+
+	g_appSettings.mpuDim.set(DEFAULT_MPU_DIM);
+	g_appSettings.mpuDimStart = DEFAULT_MPU_DIM;
+	g_appSettings.mpuDimEnd = DEFAULT_MPU_DIM;
+	g_appSettings.mpuDimStep = DEFAULT_MPU_DIM;
 
 	g_appSettings.ctSIMDLength = PS_SIMD_FLEN;
 	g_appSettings.ctThreads = g_cpuInfo.ctCores;
@@ -866,6 +891,17 @@ int main(int argc, char* argv[])
 			g_appSettings.ctThreadCountEnd = atoi(argv[i+2]);
 			g_appSettings.ctThreads = g_appSettings.ctThreadCountStart;
 		}
+		if(std::strcmp(strArg.c_str(), "-m") == 0)
+		{
+			U8 dim = atoi(argv[i+1]);
+			if(!MPUDim::isValid(dim)) {
+				LogErrorArg1("MPU dimension (%u) is invalid!", dim);
+				exit(1);
+			}
+
+			LogInfoArg1("Set MPU dimension to (%u)", dim);
+			g_appSettings.mpuDim.set(dim);
+		}
 
 		if(std::strcmp(strArg.c_str(), "-h") == 0)
 		{
@@ -884,6 +920,7 @@ int main(int argc, char* argv[])
 			printf("-g \t Run GPU OpenCL polygonizer.\n");
 			printf("-d \t Enables writing average cell processing info in utilization graph.\n");
 			printf("-i \t Sets interactive mode. Each draw call will polygonize.\n");
+			printf("-m \t Sets the MPU grid dimension.\n");
 			printf("-o \t Output MPU processing and Core utilization graphs in svg and eps.\n");
 
 			return 0;
@@ -1001,7 +1038,7 @@ bool Run_CPUPoly(const AnsiStr& strModelFP)
 		U32 szNodeMatrices 	= sizeof(SOABlobNodeMatrices);
 
 		U32 szMPU 		= sizeof(MPU);
-		U32 szEdgeTable = sizeof(EDGETABLE);
+		U32 szEdgeTable = sizeof(EdgeTable);
 		U32 szFieldCache = sizeof(float) * 512;
 
 		szWorkItemMem = szPrims + szNodeMatrices + szOps + szMPU + szEdgeTable + szFieldCache;
@@ -1042,9 +1079,9 @@ bool Run_CPUPoly(const AnsiStr& strModelFP)
 		for(int iCellStep = 0; iCellStep <= ctCellSteps; iCellStep++)
 		{
 			g_appSettings.cellsize = g_appSettings.cellsizeStart + iCellStep * g_appSettings.cellsizeStep;
-			printf("Parsip CMD - CellSize Param set to %.2f. \n", g_appSettings.cellsize);
+			printf("ParsipSimd - CellSize Param = %.2f, MPU DIM = %u \n", g_appSettings.cellsize, g_appSettings.mpuDim.dim());
 
-			g_appSettings.bReady = g_cpuPoly.prepareBBoxes(g_appSettings.cellsize);
+			g_appSettings.bReady = g_cpuPoly.prepareBBoxes(g_appSettings.cellsize, g_appSettings.mpuDim.dim());
 			vec3i dim = g_cpuPoly.getMPUs()->getWorkDim();
 			vec3f lo = g_cpuPoly.getBlobPrims()->bboxLo;
 			vec3f hi = g_cpuPoly.getBlobPrims()->bboxHi;
@@ -1273,11 +1310,11 @@ void ProduceUsageChartAsTexture(const char* chrDBPath,
 	// set the rendering destination to FBO
 	glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	// draw a rotating teapot
+
 	glPushMatrix();
 	glDisable(GL_LIGHTING);
 		glPushAttrib(GL_ALL_ATTRIB_BITS);
-			glColor3f(1.0f, 1.0f, 1.0f);
+			glColor3f(1.0f, 0.0f, 1.0f);
 			glBegin(GL_QUADS);
 				glVertex2f(0.0, 0.0f);
 				glVertex2f(1.0, 0.0f);

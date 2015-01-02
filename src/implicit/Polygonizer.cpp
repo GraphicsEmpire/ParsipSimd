@@ -3,10 +3,9 @@
 #include "_CellConfigTable.h"
 #include "base/Matrix.h"
 #include "base/SIMDVecN.h"
+#include "base/Logger.h"
 
 using namespace PS::MATH;
-//#include "PS_KDTree.h"
-//#include "stdio.h"
 
 namespace PS{
 namespace SIMDPOLY{
@@ -14,15 +13,142 @@ namespace SIMDPOLY{
 
 typedef tbb::enumerable_thread_specific< std::pair<int, int> > CounterTotalCrossedMPU;
 typedef tbb::enumerable_thread_specific< FieldComputer > ThreadFieldComputer;
+typedef tbb::enumerable_thread_specific< EdgeTable > ThreadEdgeTable;
 
 CounterTotalCrossedMPU g_ctTotalCrossed(std::make_pair(0, 0));
 ThreadFieldComputer g_threadFieldComputer;
+ThreadEdgeTable g_threadEdgeTable;
+
+EdgeTable::EdgeTable() {
+	init();
+}
+
+EdgeTable::~EdgeTable() {
+	cleanup();
+}
+
+void EdgeTable::init() {
+	m_pEdgesCount = NULL;
+	m_pHasEdgeWithHiNeighbor = NULL;
+	m_pIndexVertices = NULL;
+}
+
+void EdgeTable::cleanup() {
+	FreeAligned(m_pEdgesCount);
+	FreeAligned(m_pHasEdgeWithHiNeighbor);
+	FreeAligned(m_pIndexVertices);
+	init();
+}
+
+void EdgeTable::allocate(const MPUDim& mpuDim) {
+	m_mpuDim.set(mpuDim.dim());
+	m_pEdgesCount = AllocAligned<U8>(mpuDim.dim3());
+	m_pHasEdgeWithHiNeighbor = AllocAligned<U8>(mpuDim.dim3() * 3);
+	m_pIndexVertices = AllocAligned<U16>(mpuDim.dim3() * 3);
+}
+
+
+void EdgeTable::reset(const MPUDim& mpuDim) {
+	memset(m_pEdgesCount, 0, mpuDim.dim3() * sizeof(U8));
+	memset(m_pHasEdgeWithHiNeighbor, 0, mpuDim.dim3() * 3 * sizeof(U8));
+	memset(m_pIndexVertices, 0, mpuDim.dim3() * 3 * sizeof(U16));
+}
+
+int EdgeTable::getEdge(int i, int j, int k, int edgeAxis) const
+{
+	//Hash Value of the low corner
+	int hashval = m_mpuDim.hash(i, j, k);
+
+	//Check how many edges are registered at that vertex
+	if(m_pEdgesCount[hashval] > 0)
+	{
+		//The following line is simply x = 0, y = 1 or z = 2 since the difference is one at one direction only.
+		if(m_pHasEdgeWithHiNeighbor[hashval*3 + edgeAxis])
+			return m_pIndexVertices[hashval*3 + edgeAxis];
+	}
+	return -1;
+}
+
+int EdgeTable::getEdge(vec3i& start, vec3i& end) const
+{
+	int i1 = start.x;
+	int j1 = start.y;
+	int k1 = start.z;
+	int i2 = end.x;
+	int j2 = end.y;
+	int k2 = end.z;
+
+	if (i1>i2 || (i1==i2 && (j1>j2 || (j1==j2 && k1>k2))))
+	{
+		int t;
+		t=i1; i1=i2; i2=t;
+		t=j1; j1=j2; j2=t;
+		t=k1; k1=k2; k2=t;
+		start = vec3i(i1, j1, k1);
+		end = vec3i(i2, j2, k2);
+	}
+
+	//Hash Value of the low corner
+	int hashval = m_mpuDim.hash(i1, j1, k1);
+
+	//Check how many edges are registered at that vertex
+	if(m_pEdgesCount[hashval] > 0)
+	{
+		//The following line is simply x = 0, y = 1 or z = 2 since the difference is one at one direction only.
+		int idxEdge = (((i2 - i1) + (j2 - j1)*2 + (k2 - k1)*4) >> 1);
+
+		if(m_pHasEdgeWithHiNeighbor[hashval*3 + idxEdge])
+			return m_pIndexVertices[hashval*3 + idxEdge];
+	}
+	return -1;
+}
+
+
+void EdgeTable::setEdge(int i, int j, int k, int edgeAxis, int vid) const
+{
+	int hashval = m_mpuDim.hash(i, j, k);
+
+	m_pEdgesCount[hashval]++;
+	m_pHasEdgeWithHiNeighbor[hashval*3 + edgeAxis] = 1;
+	m_pIndexVertices[hashval*3 + edgeAxis] = vid;
+}
+
+void EdgeTable::setEdge(vec3i& start, vec3i& end, int vid) const
+{
+	int i1 = start.x;
+	int j1 = start.y;
+	int k1 = start.z;
+	int i2 = end.x;
+	int j2 = end.y;
+	int k2 = end.z;
+
+	if (i1>i2 || (i1==i2 && (j1>j2 || (j1==j2 && k1>k2))))
+	{
+		int t;
+		t=i1; i1=i2; i2=t;
+		t=j1; j1=j2; j2=t;
+		t=k1; k1=k2; k2=t;
+		start = vec3i(i1, j1, k1);
+		end = vec3i(i2, j2, k2);
+	}
+
+	int hashval = m_mpuDim.hash(i1, j1, k1);
+	int idxEdge = (((i2 - i1) + (j2 - j1)*2 + (k2 - k1)*4) >> 1);
+
+	m_pEdgesCount[hashval]++;
+	m_pHasEdgeWithHiNeighbor[hashval*3 + idxEdge] = 1;
+	m_pIndexVertices[hashval*3 + idxEdge] = vid;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-ThreadStartSetup::ThreadStartSetup(const SOABlobOps* lpOps,
+ThreadStartSetup::ThreadStartSetup(const MPUDim& mpuDim,
+								   const SOABlobOps* lpOps,
 								   const SOABlobPrims* lpPrims,
 		  	  	 	 	 	 	   const SOABlobNodeMatrices* lpMatrices)
 {
+	m_mpuDim.set(mpuDim.dim());
+
 	m_lpBlobPrims = const_cast<SOABlobPrims*>(lpPrims);
 	m_lpBlobMatrices = const_cast<SOABlobNodeMatrices*>(lpMatrices);
 	m_lpBlobOps = const_cast<SOABlobOps*>(lpOps);
@@ -32,8 +158,13 @@ ThreadStartSetup::ThreadStartSetup(const SOABlobOps* lpOps,
 
 void ThreadStartSetup::on_scheduler_entry(bool is_worker)
 {
-	ThreadFieldComputer::reference m_localFieldComputer = g_threadFieldComputer.local();
+	//EdgeTable
+	ThreadEdgeTable::reference m_localEdgeTable = g_threadEdgeTable.local();
+	m_localEdgeTable.allocate(m_mpuDim);
 
+
+	//FieldComputer
+	ThreadFieldComputer::reference m_localFieldComputer = g_threadFieldComputer.local();
 
 	//Create this copy for the thread
 	memcpy(&m_localFieldComputer.m_blobOps, m_lpBlobOps, sizeof(SOABlobOps));
@@ -48,33 +179,11 @@ void ThreadStartSetup::on_scheduler_entry(bool is_worker)
 	PS_PREFETCH(&m_localFieldComputer.m_blobPrims);
 	PS_PREFETCH(&m_localFieldComputer.m_blobPrimMatrices);
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////
-//Returns the count of needed MPUs
-vec3i CountMPUNeeded(float cellsize, const vec3f& lo, const vec3f& hi)
+
+void ThreadStartSetup::on_scheduler_exit(bool is_worker)
 {
-	const int cellsPerMPU = GRID_DIM - 1;
-
-	vec3f allSides = vec3f::sub(hi, lo);
-	vec3i ctCellsNeeded;
-	vec3i ctMPUNeeded;
-
-	ctCellsNeeded.x = static_cast<int>(ceil(allSides.x / cellsize));
-	ctCellsNeeded.y = static_cast<int>(ceil(allSides.y / cellsize));
-	ctCellsNeeded.z = static_cast<int>(ceil(allSides.z / cellsize));
-
-	ctMPUNeeded.x = ctCellsNeeded.x / cellsPerMPU;
-	ctMPUNeeded.y = ctCellsNeeded.y / cellsPerMPU;
-	ctMPUNeeded.z = ctCellsNeeded.z / cellsPerMPU;
-	if (ctCellsNeeded.x % cellsPerMPU != 0)
-		ctMPUNeeded.x++;
-	if (ctCellsNeeded.y % cellsPerMPU != 0)
-		ctMPUNeeded.y++;
-	if (ctCellsNeeded.z % cellsPerMPU != 0)
-		ctMPUNeeded.z++;
-
-	return ctMPUNeeded;
 }
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool IsBoxInside(const vec3f& aLo, const vec3f& aHi, const vec3f& bLo, const vec3f& bHi)
 {
 	if((aLo.x < bLo.x)||(aLo.y < bLo.y)||(aLo.z < bLo.z))
@@ -615,6 +724,7 @@ int Polygonize(float cellsize,
 			   const SOABlobNodeMatrices& blobPrimMatrices,
 			   U32 	ctMPUs,
 			   MPU* lpMPUs,
+			   const MPUDim& mpuDim,
 			   MPUGLOBALMESH* lpGlobalMesh,
 			   MPUSTATS* lpProcessStats)
 {
@@ -623,11 +733,16 @@ int Polygonize(float cellsize,
 	if((lpMPUs == NULL)||(ctMPUs == 0))
 		return RET_PARAM_ERROR;
 
+	LogInfoArg1("Start polygonizer with %u MPUs", ctMPUs);
+
 	//Now Run Threads
-	ThreadStartSetup startSetup(&blobOps, &blobPrims, &blobPrimMatrices);
-	CMPUProcessor body(cellsize, bScalarRun, ctMPUs, lpMPUs, lpGlobalMesh, lpProcessStats);
+	ThreadStartSetup startSetup(mpuDim, &blobOps, &blobPrims, &blobPrimMatrices);
+	CMPUProcessor body(cellsize, bScalarRun, mpuDim.dim(), ctMPUs, lpMPUs, lpGlobalMesh, lpProcessStats);
 	tbb::parallel_for(blocked_range<size_t>(0, ctMPUs), body, tbb::auto_partitioner());
+
+	//cleanup thread-specific variables
 	g_threadFieldComputer.clear();
+	g_threadEdgeTable.clear();
 
 	return RET_SUCCESS;
 }
@@ -650,21 +765,25 @@ void PrintThreadResults(int ctAttempts, U32* lpThreadProcessed, U32* lpThreadCro
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 CMPUProcessor::CMPUProcessor(float cellsize, bool bScalarRun,
-							 size_t ctMPUs, MPU* lpMPU, MPUGLOBALMESH* lpGlobalMesh, MPUSTATS* lpStats)
+							 U8 mpuDim, U32 ctMPUs, MPU* lpMPU, MPUGLOBALMESH* lpGlobalMesh, MPUSTATS* lpStats)
 
 {
 	m_cellsize = cellsize;
+	m_bScalarRun = bScalarRun;
 	m_ctMPUs = ctMPUs;	
 	m_lpMPU = lpMPU;
 	m_lpGlobalMesh = lpGlobalMesh;
 	m_lpStats = lpStats;
-	m_bScalarRun = bScalarRun;
+	m_mpuDim.set(mpuDim);
 }
 
 void CMPUProcessor::operator()(const blocked_range<size_t>& range) const
 {
-	CounterTotalCrossedMPU::reference m_localCounter = g_ctTotalCrossed.local();
-	ThreadFieldComputer::reference m_localFieldComputer = g_threadFieldComputer.local();
+	CounterTotalCrossedMPU::reference threadCounter = g_ctTotalCrossed.local();
+	ThreadFieldComputer::reference threadFieldComputer = g_threadFieldComputer.local();
+	ThreadEdgeTable::reference threadEdgeTable = g_threadEdgeTable.local();
+
+
 	tbb_thread::id threadID = this_tbb_thread::get_id();
 
 	tbb::tick_count tickFieldEvals;
@@ -679,9 +798,9 @@ void CMPUProcessor::operator()(const blocked_range<size_t>& range) const
 
 		//Call MPU processor
 		if(m_bScalarRun)
-			process_cells_scalar(m_localFieldComputer, m_lpMPU[i], *m_lpGlobalMesh, tickFieldEvals);
+			process_cells_scalar(threadEdgeTable, threadFieldComputer, m_lpMPU[i], *m_lpGlobalMesh, tickFieldEvals);
 		else
-			process_cells_simd(m_localFieldComputer, m_lpMPU[i], *m_lpGlobalMesh, tickFieldEvals);
+			process_cells_simd(threadEdgeTable, threadFieldComputer, m_lpMPU[i], *m_lpGlobalMesh, tickFieldEvals);
 
 		if(m_lpStats)
 		{
@@ -690,11 +809,11 @@ void CMPUProcessor::operator()(const blocked_range<size_t>& range) const
 		}
 
 		//Increment Total MPU Counter
-		++m_localCounter.first;
+		++threadCounter.first;
 
 		//Increment intersected MPUs Counter
 		if(m_lpMPU[i].ctTriangles > 0)
-			++m_localCounter.second;
+			++threadCounter.second;
 	}
 }
 
@@ -703,7 +822,7 @@ void CMPUProcessor::operator()(const blocked_range<size_t>& range) const
  */
 bool CMPUProcessor::discard(const FieldComputer& fc, MPU& mpu) const
 {
-	const float mpuSide = (GRID_DIM - 1) * m_cellsize;
+	const float mpuSide = (m_mpuDim.dim() - 1) * m_cellsize;
 	if(mpuSide > 1.0f)
 		return false;
 
@@ -888,31 +1007,29 @@ bool CMPUProcessor::discard(const FieldComputer& fc, MPU& mpu) const
 /*!
  * Processes cells in SIMD
  */
-void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLOBALMESH& globalMesh, tbb::tick_count& tickFieldEvals) const
+void CMPUProcessor::process_cells_simd(EdgeTable& edgeTable,
+									   const FieldComputer& fc, MPU& mpu,
+									   MPUGLOBALMESH& globalMesh, tbb::tick_count& tickFieldEvals) const
 {
 	//Zero EveryThing
 	//mpu.error = 0.0f;
 	mpu.ctFieldEvals = 0;
 	mpu.ctVertices = 0;
 	mpu.ctTriangles = 0;
+	edgeTable.reset(m_mpuDim);
 
 	//Discard MPU is doesnot contain field
 	if(this->discard(fc, mpu))
 		return;
 
 	//Create Field-Value Cache and init it
-	const U32 m = GRID_DIM * GRID_DIM * GRID_DIM;
+	const U32 m = m_mpuDim.dim3();
 	float PS_SIMD_ALIGN(fvCache[m]);
 
-	//Init
-	EDGETABLE edgeTable;
-	memset(&edgeTable, 0, sizeof(EDGETABLE));
-
-
 	//Compute steps
-	const int kMax = PS_SIMD_BLOCKS(GRID_DIM);
+	const int kMax = PS_SIMD_BLOCKS(m_mpuDim.dim());
 	const int szOneNeedle = PS_SIMD_FLEN * kMax;
-	const int szOneSlab = szOneNeedle * GRID_DIM;
+	const int szOneSlab = szOneNeedle * m_mpuDim.dim();
 
 	//Temporary goodies
 	Float_ simdIsoVal(ISO_VALUE);
@@ -931,9 +1048,9 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 		Float_ simdScaleZ(arrScaleZ);
 
 		//Cache all field-values with in this MPU
-		for(int i=0; i<GRID_DIM; i++)
+		for(int i=0; i<m_mpuDim.dim(); i++)
 		{
-			for(int j=0; j<GRID_DIM; j++)
+			for(int j=0; j<m_mpuDim.dim(); j++)
 			{
 				for(int k=0; k<kMax; k++)
 				{
@@ -978,9 +1095,12 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 	//then compute color and normals for all vertices
 	/////////////////////////////////////////////////////////
 	//For the 8 vertices of each cell
-	U16* lpMeshTriangles = &globalMesh.vTriangles[mpu.idxGlobalID * MPU_MESHPART_TRIANGLE_STRIDE];
+	const U32 mpuMeshVertexStrideF = globalMesh.mpuMeshVertexStrideF;
+	const U32 mpuMeshTriangleStrideU32 = globalMesh.mpuMeshTriangleStrideU32;
 
-	U32 szVertexPartOffset = mpu.idxGlobalID * MPU_MESHPART_VERTEX_STRIDE;
+
+	U32* lpMeshTriangles = &globalMesh.vTriangles[mpu.idxGlobalID * mpuMeshTriangleStrideU32];
+	U32 szVertexPartOffset = mpu.idxGlobalID * mpuMeshVertexStrideF;
 	float* lpMeshVertices = &globalMesh.vPos[szVertexPartOffset];
 	float* lpMeshNormals = &globalMesh.vNorm[szVertexPartOffset];
 	float* lpMeshColors = &globalMesh.vColor[szVertexPartOffset];
@@ -1017,19 +1137,19 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 	}
 #endif
 
-	for(int i=0; i<GRID_DIM-1; i++)
+	for(int i=0; i<m_mpuDim.dim() - 1; i++)
 	{
 		//Compute once use multiple of i
 		U32 ip0 = i * szOneNeedle;
 		U32 ip1 = ip0 + szOneNeedle;
 
-		for(int j=0; j<GRID_DIM-1; j++)
+		for(int j=0; j<m_mpuDim.dim()-1; j++)
 		{
 			//Compute once use multiple of j
 			U32 jp0 = j * szOneSlab;
 			U32 jp1 = jp0 + szOneSlab;
 
-			for(int k=0; k<GRID_DIM-1; k++)
+			for(int k=0; k<m_mpuDim.dim()-1; k++)
 			{
 				//GATHER FIELDS
 				U32 idx = ip0 + jp0 + k;
@@ -1092,7 +1212,7 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 					int sy = j + ((idxEdgeStart & 2) >> 1);
 					int sz = k + (idxEdgeStart & 1);
 
-					idxMeshVertex[icase] = getEdge(edgeTable, sx, sy, sz, idxEdgeAxis);
+					idxMeshVertex[icase] = edgeTable.getEdge(sx, sy, sz, idxEdgeAxis);
 
 					//See if the vertex exist in edge table. If it doesn't exist compute and add it to edge table
 					if(idxMeshVertex[icase] == -1)
@@ -1190,7 +1310,7 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 
 						//Get vertex v index from list. It is the last one
 						idxMeshVertex[icase] = idxVertex;
-						setEdge(edgeTable, sx, sy, sz, idxEdgeAxis, idxVertex);
+						edgeTable.setEdge(sx, sy, sz, idxEdgeAxis, idxVertex);
 
 						//Test Pourya
 						/*
@@ -1223,8 +1343,9 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 						lpMeshColors[idxVertex_Y]   = simdOutColorY[0];
 						lpMeshColors[idxVertex_Z]   = simdOutColorZ[0];
 						*/
-
 					}
+
+
 				}//End icase
 
 				//Number of polygons
@@ -1240,7 +1361,6 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 			}//Processed One Cell
 		}
 	}
-
 
 
 	//Color and Normals are computed Last
@@ -1261,34 +1381,7 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 		//Compute Color and Normals
 		U16 ctVertexBlocks = PS_SIMD_BLOCKS(mpu.ctVertices);
 		mpu.ctFieldEvals += ctVertexBlocks;
-/*
-		for(U32 iVertex=0; iVertex<mpu.ctVertices; iVertex++)
-		{
-			simdPX = Float_(lpMeshVertices[iVertex*3]);
-			simdPY = Float_(lpMeshVertices[iVertex*3 + 1]);
-			simdPZ = Float_(lpMeshVertices[iVertex*3 + 2]);
 
-			//Compute Field and Color
-			fc.fieldValueAndColor(simdPX, simdPY, simdPZ,
-								  simdOutField, simdOutColorX, simdOutColorY, simdOutColorZ);
-			//Use computed field to get the normal
-			fc.normal(simdPX, simdPY, simdPZ, simdOutField,
-					  simdOutNormalX, simdOutNormalY, simdOutNormalZ, NORMAL_DELTA);
-
-			U16 idxVertex_X = iVertex * 3;
-			U16 idxVertex_Y = idxVertex_X + 1;
-			U16 idxVertex_Z = idxVertex_X + 2;
-
-			//Test Pourya
-			lpMeshNormals[idxVertex_X]   = simdOutNormalX[0];
-			lpMeshNormals[idxVertex_Y]   = simdOutNormalY[0];
-			lpMeshNormals[idxVertex_Z]   = simdOutNormalZ[0];
-
-			lpMeshColors[idxVertex_X]   = simdOutColorX[0];
-			lpMeshColors[idxVertex_Y]   = simdOutColorY[0];
-			lpMeshColors[idxVertex_Z]   = simdOutColorZ[0];
-		}
-*/
 		for(U16 iBlock = 0; iBlock < ctVertexBlocks; iBlock++)
 		{
 			U32 szBlockOffset = iBlock * szBlockStride;
@@ -1313,95 +1406,8 @@ void CMPUProcessor::process_cells_simd(const FieldComputer& fc, MPU& mpu, MPUGLO
 
 	}
 
-
 }
 
-
-int CMPUProcessor::getEdge(const EDGETABLE& edgeTable, int i, int j, int k, int edgeAxis) const
-{
-	//Hash Value of the low corner
-	int hashval = CELLID_FROM_IDX(i, j, k);
-
-	//Check how many edges are registered at that vertex
-	if(edgeTable.ctEdges[hashval] > 0)
-	{
-		//The following line is simply x = 0, y = 1 or z = 2 since the difference is one at one direction only.
-		if(edgeTable.hasEdgeWithHiNeighbor[hashval*3 + edgeAxis])
-			return edgeTable.idxVertices[hashval*3 + edgeAxis];
-	}
-	return -1;
-}
-
-int CMPUProcessor::getEdge(const EDGETABLE& edgeTable , vec3i& start, vec3i& end) const
-{
-	int i1 = start.x;
-	int j1 = start.y;
-	int k1 = start.z;
-	int i2 = end.x;
-	int j2 = end.y;
-	int k2 = end.z;
-
-	if (i1>i2 || (i1==i2 && (j1>j2 || (j1==j2 && k1>k2)))) 
-	{
-		int t;
-		t=i1; i1=i2; i2=t; 
-		t=j1; j1=j2; j2=t; 
-		t=k1; k1=k2; k2=t;
-		start = vec3i(i1, j1, k1);
-		end = vec3i(i2, j2, k2);
-	}
-
-	//Hash Value of the low corner
-	int hashval = CELLID_FROM_IDX(i1, j1, k1);
-
-	//Check how many edges are registered at that vertex
-	if(edgeTable.ctEdges[hashval] > 0)
-	{
-		//The following line is simply x = 0, y = 1 or z = 2 since the difference is one at one direction only.
-		int idxEdge = (((i2 - i1) + (j2 - j1)*2 + (k2 - k1)*4) >> 1);
-		if(edgeTable.hasEdgeWithHiNeighbor[hashval*3 + idxEdge])
-			return edgeTable.idxVertices[hashval*3 + idxEdge];
-	}
-	return -1;
-}
-
-
-void CMPUProcessor::setEdge(EDGETABLE& edgeTable, int i, int j, int k, int edgeAxis, int vid) const
-{
-	int hashval = CELLID_FROM_IDX(i, j, k);
-
-	edgeTable.ctEdges[hashval]++;
-	edgeTable.hasEdgeWithHiNeighbor[hashval*3 + edgeAxis] = 1;
-	edgeTable.idxVertices[hashval*3 + edgeAxis] = vid;
-}
-
-void CMPUProcessor::setEdge(EDGETABLE& edgeTable, vec3i& start, vec3i& end, int vid) const
-{
-	int i1 = start.x;
-	int j1 = start.y;
-	int k1 = start.z;
-	int i2 = end.x;
-	int j2 = end.y;
-	int k2 = end.z;
-
-	if (i1>i2 || (i1==i2 && (j1>j2 || (j1==j2 && k1>k2)))) 
-	{
-		int t;
-		t=i1; i1=i2; i2=t; 
-		t=j1; j1=j2; j2=t; 
-		t=k1; k1=k2; k2=t;
-		start = vec3i(i1, j1, k1);
-		end = vec3i(i2, j2, k2);
-	}
-
-	int hashval = CELLID_FROM_IDX(i1, j1, k1);
-
-	edgeTable.ctEdges[hashval]++;
-
-	int idxEdge = (((i2 - i1) + (j2 - j1)*2 + (k2 - k1)*4) >> 1);
-	edgeTable.hasEdgeWithHiNeighbor[hashval*3 + idxEdge] = 1;
-	edgeTable.idxVertices[hashval*3 + idxEdge] = vid;
-}
 
 /*
 int CMPUProcessor::computeRootNewtonRaphson(const vec3f& p1, const vec3f& p2,

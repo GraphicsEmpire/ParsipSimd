@@ -772,6 +772,9 @@ bool ExportMeshAsObj(const char* lpFilePath, const PolyMPUs& poly)
 	arrNormals.resize(ctVertices*3);
 	arrTriangles.resize(ctTriangles*3);
 
+
+	const U32 mpuMeshVertexStrideF = poly.globalMesh.mpuMeshVertexStrideF;
+	const U32 mpuMeshTriangleStrideU32 = poly.globalMesh.mpuMeshTriangleStrideU32;
 	ctTriangles = 0;
 	ctVertices = 0;
 
@@ -783,7 +786,7 @@ bool ExportMeshAsObj(const char* lpFilePath, const PolyMPUs& poly)
 			U32 triOffset = ctVertices;
 			for(U32 iTri = 0; iTri < poly.lpMPUs[i].ctTriangles; iTri++)
 			{
-				U32 idxMeshTriPart = i * MPU_MESHPART_TRIANGLE_STRIDE + iTri * 3;
+				U32 idxMeshTriPart = i * mpuMeshTriangleStrideU32 + iTri * 3;
 				arrTriangles[ctTriangles*3] 	= poly.globalMesh.vTriangles[idxMeshTriPart] + triOffset;
 				arrTriangles[ctTriangles*3 + 1] = poly.globalMesh.vTriangles[idxMeshTriPart + 1] + triOffset;
 				arrTriangles[ctTriangles*3 + 2] = poly.globalMesh.vTriangles[idxMeshTriPart + 2] + triOffset;
@@ -793,7 +796,7 @@ bool ExportMeshAsObj(const char* lpFilePath, const PolyMPUs& poly)
 
 			for(U32 iVertex = 0; iVertex < poly.lpMPUs[i].ctVertices; iVertex++)
 			{
-				U32 idxMeshVtxPart = i * MPU_MESHPART_VERTEX_STRIDE + iVertex * 3;
+				U32 idxMeshVtxPart = i * mpuMeshVertexStrideF + iVertex * 3;
 				arrVertices[ctVertices*3] = poly.globalMesh.vPos[idxMeshVtxPart];
 				arrVertices[ctVertices*3 + 1] = poly.globalMesh.vPos[idxMeshVtxPart + 1];
 				arrVertices[ctVertices*3 + 2] = poly.globalMesh.vPos[idxMeshVtxPart + 2];
