@@ -7,7 +7,7 @@
 #include <CL/opencl.h>
 #endif
 
-enum clppVendor { Vendor_Unknown, Vendor_NVidia, Vendor_AMD, Vendor_Intel };
+enum clppVendor { Vendor_Unknown, Vendor_NVidia, Vendor_AMD, Vendor_Intel, Vendor_Apple };
 
 class clppContext
 {

@@ -91,10 +91,10 @@ namespace PS {
     		U32 ctPrimsToCopy = MATHMAX(m_blob.countPrimitives(), 1);
 
     		//Memory Buffers
-    		m_lpGPU->createMemBuffer(sizeof(float) * DATASIZE_HEADER, PS::CL::memReadOnly, m_inMemHeader);
-    		m_lpGPU->createMemBuffer(sizeof(float) * DATASIZE_OPERATOR * ctOpsToCopy, PS::CL::memReadOnly, m_inMemOps);
-    		m_lpGPU->createMemBuffer(sizeof(float) * DATASIZE_PRIMITIVE * ctPrimsToCopy, PS::CL::memReadOnly, m_inMemPrims);
-    		m_lpGPU->createMemBuffer(sizeof(float) * PRIM_MATRIX_STRIDE * m_blob.countMtxNodes(), PS::CL::memReadOnly, m_inMemMtx);
+    		m_lpGPU->createMemBuffer(sizeof(float) * DATASIZE_HEADER, PS::CL::memReadOnly, NULL, m_inMemHeader);
+    		m_lpGPU->createMemBuffer(sizeof(float) * DATASIZE_OPERATOR * ctOpsToCopy, PS::CL::memReadOnly, NULL, m_inMemOps);
+    		m_lpGPU->createMemBuffer(sizeof(float) * DATASIZE_PRIMITIVE * ctPrimsToCopy, PS::CL::memReadOnly, NULL, m_inMemPrims);
+    		m_lpGPU->createMemBuffer(sizeof(float) * PRIM_MATRIX_STRIDE * m_blob.countMtxNodes(), PS::CL::memReadOnly, NULL, m_inMemMtx);
 
     		//Header
     		if(!m_lpGPU->enqueueWriteBuffer(m_inMemHeader.handle(), m_inMemHeader.size(), m_blob.arrHeader.cptr()))
@@ -152,7 +152,7 @@ namespace PS {
 
 			//GridParam
 			Buffer inMemGridParam;
-			m_lpGPU->createMemBuffer(sizeof(VoxelGrid), PS::CL::memReadOnly, inMemGridParam);
+			m_lpGPU->createMemBuffer(sizeof(VoxelGrid), PS::CL::memReadOnly, NULL, inMemGridParam);
 			if(!m_lpGPU->enqueueWriteBuffer(inMemGridParam.handle(), inMemGridParam.size(), &grid))
 				return -1;
 
@@ -257,7 +257,7 @@ namespace PS {
     		//Create Memory for all field points
     		U32 szVertexBuffer = sizeof(float) * step * ctVertices;
     		Buffer inoutMemFieldArray;
-    		m_lpGPU->createMemBuffer(szVertexBuffer, PS::CL::memReadWrite, inoutMemFieldArray);
+    		m_lpGPU->createMemBuffer(szVertexBuffer, PS::CL::memReadWrite, NULL, inoutMemFieldArray);
     		if(!m_lpGPU->enqueueWriteBuffer(inoutMemFieldArray.handle(), inoutMemFieldArray.size(), &vertices[0]))
     			return -1;
 
@@ -305,7 +305,7 @@ namespace PS {
     		//Create Memory for all field points
     		U32 szVertexBuffer = sizeof(float) * step * ctVertices;
     		Buffer inoutMemFieldArray;
-    		m_lpGPU->createMemBuffer(szVertexBuffer, PS::CL::memReadWrite, inoutMemFieldArray);
+    		m_lpGPU->createMemBuffer(szVertexBuffer, PS::CL::memReadWrite, NULL, inoutMemFieldArray);
     		if(!m_lpGPU->enqueueWriteBuffer(inoutMemFieldArray.handle(), inoutMemFieldArray.size(), &vertices[0]))
     			return -1;
 

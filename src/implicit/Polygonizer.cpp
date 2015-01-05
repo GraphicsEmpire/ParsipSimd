@@ -40,6 +40,21 @@ void EdgeTable::cleanup() {
 	init();
 }
 
+U64 EdgeTable::MemSizeInBytes(const MPUDim& mpuDim) {
+	U64 total = sizeof(EdgeTable);
+
+	//pEdgesCount
+	total += mpuDim.dim3() * sizeof(U8);
+
+	//pHasEdgeWithHiNeighbor
+	total += mpuDim.dim3() * 3 * sizeof(U8);
+
+	//pIndexVertices
+	total += mpuDim.dim3() * 3 * sizeof(U16);
+
+	return total;
+}
+
 void EdgeTable::allocate(const MPUDim& mpuDim) {
 	m_mpuDim.set(mpuDim.dim());
 	m_pEdgesCount = AllocAligned<U8>(mpuDim.dim3());
@@ -732,8 +747,6 @@ int Polygonize(float cellsize,
 		return RET_PARAM_ERROR;
 	if((lpMPUs == NULL)||(ctMPUs == 0))
 		return RET_PARAM_ERROR;
-
-	LogInfoArg1("Start polygonizer with %u MPUs", ctMPUs);
 
 	//Now Run Threads
 	ThreadStartSetup startSetup(mpuDim, &blobOps, &blobPrims, &blobPrimMatrices);

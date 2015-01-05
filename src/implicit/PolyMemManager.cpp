@@ -57,6 +57,11 @@ bool PolyMPUs::allocate(const vec3i& workDim, const MPUDim& mpuDim)
 	globalMesh.vPos   = tbb::cache_aligned_allocator<float>().allocate(globalMesh.globalMeshVertexBufferSizeF);
 	globalMesh.vTriangles = tbb::cache_aligned_allocator<U32>().allocate(globalMesh.globalMeshTriangleBufferSizeU32);
 
+	//Total Memory size
+	globalMesh.memSizeInBytes = globalMesh.globalMeshVertexBufferSizeF * 3 * sizeof(float) +
+								globalMesh.globalMeshTriangleBufferSizeU32 * sizeof(U32) +
+								sizeof(MPUGLOBALMESH);
+
 	m_ctAllocated = ctNeeded;
 	return true;
 }

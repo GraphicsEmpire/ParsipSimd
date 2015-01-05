@@ -252,6 +252,7 @@ struct PS_BEGIN_ALIGNED(PS_SIMD_FLEN) MPUGLOBALMESH{
 	U64 globalMeshVertexBufferSizeF;
 	U64 globalMeshTriangleBufferSizeU32;
 
+	U64 memSizeInBytes;
 } PS_END_ALIGNED(PS_SIMD_FLEN);
 
 
@@ -274,6 +275,7 @@ public:
 	virtual ~EdgeTable();
 
 	//memory management
+	static U64 MemSizeInBytes(const MPUDim& mpuDim);
 	void allocate(const MPUDim& mpuDim);
 	void cleanup();
 

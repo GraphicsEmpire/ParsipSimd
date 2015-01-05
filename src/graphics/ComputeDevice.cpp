@@ -22,11 +22,11 @@ namespace CL {
     Buffer::Buffer(const Buffer& rhs) {
     	m_clMem = rhs.m_clMem;
     	m_size = rhs.m_size;
-    	m_access = rhs.m_access;
+    	m_flags = rhs.m_flags;
     	m_isSharedWithGL = rhs.m_isSharedWithGL;
     }
 
-    Buffer::Buffer(cl_mem clMem, U32 size, MEMACCESSMODE access, bool isSharedGL) {
+    Buffer::Buffer(cl_mem clMem, U32 size, cl_mem_flags access, bool isSharedGL) {
     	this->set(clMem, size, access, isSharedGL);
     }
     
@@ -36,14 +36,14 @@ namespace CL {
     
     void Buffer::init() {
         m_clMem = NULL;
-        m_access = memReadWrite;
+        m_flags = memReadWrite;
         m_isSharedWithGL = false;
     }
     
-    void Buffer::set(cl_mem clMem, U32 size, MEMACCESSMODE access, bool isSharedGL) {
+    void Buffer::set(cl_mem clMem, U32 size, cl_mem_flags access, bool isSharedGL) {
         m_clMem = clMem;
         m_size = size;
-        m_access = access;
+        m_flags = access;
         m_isSharedWithGL = isSharedGL;
     }
 
@@ -57,7 +57,7 @@ namespace CL {
     Buffer& Buffer::operator=(const Buffer& rhs) {
     	this->m_clMem = rhs.m_clMem;
     	this->m_size = rhs.m_size;
-    	this->m_access = rhs.m_access;
+    	this->m_flags = rhs.m_flags;
     	this->m_isSharedWithGL = rhs.m_isSharedWithGL;
     	return (*this);
     }
@@ -184,6 +184,26 @@ bool ComputeDevice::initDevice(DEVICETYPE dev,
         return false;
     }
 
+
+    //get vendor info
+    size_t len;
+    char chrVendor[1024];
+	clGetPlatformInfo (m_clPlatform, CL_PLATFORM_VENDOR, sizeof(chrVendor), chrVendor, &len);
+	AnsiStr strVendor(chrVendor, len);
+	strVendor.toUpper();
+
+	int pos = -1;
+	m_vendorType = vtMisc;
+	if (strVendor.lfindstr("INTEL", pos))
+		m_vendorType = vtIntel;
+	else if (strVendor.lfindstr("AMD", pos))
+		m_vendorType = vtAMD;
+	else if (strVendor.lfindstr("NVIDIA", pos))
+		m_vendorType = vtNvidia;
+	else if (strVendor.lfindstr("APPLE", pos))
+		m_vendorType = vtApple;
+
+
     // Create a compute context
     if(bWithOpenGLInterOp)
     {
@@ -225,7 +245,7 @@ bool ComputeDevice::initDevice(DEVICETYPE dev,
     	m_clCommandQueue = clCreateCommandQueue(m_clContext, m_clDeviceID, 0, &err);
     if (!m_clCommandQueue) 
 	{
-        LogError("Failed to create a command commands!");        
+        LogError("Failed to create a command queue!");
         return false;
     }
 
@@ -418,42 +438,41 @@ void ComputeDevice::printInfo()
 }
 
 
-cl_mem ComputeDevice::createMemBuffer(const size_t size, MEMACCESSMODE mode)
+cl_mem ComputeDevice::createMemBuffer(const size_t size, cl_mem_flags mode, void* host_ptr)
 {
-	cl_mem output = clCreateBuffer(m_clContext, mode, size, NULL, NULL);
-    if (!output)
-    {
-    	LogError("Failed to allocate device memory!");
+	cl_int errCode;
+	cl_mem output = clCreateBuffer(m_clContext, mode, size, host_ptr, &errCode);
+    if (!output) {
+    	LogErrorArg1("Failed to allocate device memory! %s", oclErrorString(errCode));
     }
 
     return output;
 }
 
-bool ComputeDevice::createMemBuffer(const size_t size, MEMACCESSMODE mode, Buffer& b) {
-	cl_mem m = createMemBuffer(size, mode);
-	b.set(m, size, mode, false);
+bool ComputeDevice::createMemBuffer(const size_t size, cl_mem_flags mode, void* host_ptr, Buffer& buffer) {
+	cl_mem m = createMemBuffer(size, mode, host_ptr);
+	buffer.set(m, size, mode, false);
 	return (m != NULL);
 }
 
-cl_mem ComputeDevice::createMemBufferFromGL(cl_GLuint glBuffer, MEMACCESSMODE mode)
+cl_mem ComputeDevice::createMemBufferFromGL(cl_GLuint glBuffer, cl_mem_flags mode)
 {
 	cl_int errCode;
 	cl_mem output = clCreateFromGLBuffer(m_clContext, mode, glBuffer, &errCode);
-    if (!output)
-    {
+    if (!output) {
     	LogErrorArg1("Error: Failed to allocate device gl-interop memory! %s", oclErrorString(errCode));
     }
 
     return output;
 }
 
-bool ComputeDevice::createBufferFromGL(cl_GLuint glBuffer, MEMACCESSMODE mode, Buffer& b) {
+bool ComputeDevice::createBufferFromGL(cl_GLuint glBuffer, cl_mem_flags mode, Buffer& buffer) {
 	cl_mem m = createMemBufferFromGL(glBuffer, mode);
-	b.set(m, sizeof(cl_mem), mode, true);
+	buffer.set(m, sizeof(cl_mem), mode, true);
 	return (m !=NULL);
 }
     
-cl_mem ComputeDevice::createImageFromGL(cl_GLuint glTex, MEMACCESSMODE mode) {
+cl_mem ComputeDevice::createImageFromGL(cl_GLuint glTex, cl_mem_flags mode) {
     cl_int errCode;
     cl_mem output = clCreateFromGLTexture2D(m_clContext, mode, GL_TEXTURE_2D, 0, glTex, &errCode);
     if(!output) {

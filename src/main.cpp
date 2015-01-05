@@ -5,6 +5,7 @@
 #include "graphics/ArcBallCamera.h"
 #include "graphics/GLFuncs.h"
 #include "graphics/AppScreen.h"
+#include "graphics/cl_vector.h"
 
 #include "tbb/task_scheduler_init.h"
 #include "tbb/tick_count.h"
@@ -22,6 +23,7 @@
 #include "plot.h"
 
 using namespace PS;
+using namespace PS::CL;
 
 
 #define WINDOW_SIZE_WIDTH 1024
@@ -810,12 +812,6 @@ int main(int argc, char* argv[])
 			g_appSettings.attempts = atoi(argv[i+1]);
 		}
 
-		if(std::strcmp(strArg.c_str(), "-c") == 0)
-		{
-			g_appSettings.cellsize = static_cast<float>(atof(argv[i+1]));
-			g_appSettings.cellsizeStart = g_appSettings.cellsize;
-			g_appSettings.cellsizeEnd = g_appSettings.cellsize;
-		}
 
 		if(std::strcmp(strArg.c_str(), "-g") == 0)
 		{
@@ -827,15 +823,6 @@ int main(int argc, char* argv[])
 			g_appSettings.UtilizationWidthPercentFromEnd = static_cast<float>(atof(argv[i+1]));
 		}
 
-		if(std::strcmp(strArg.c_str(), "-y") == 0)
-		{
-			g_appSettings.cellsizeStart = static_cast<float>(atof(argv[i+1]));
-			g_appSettings.cellsizeEnd   = static_cast<float>(atof(argv[i+2]));
-			g_appSettings.cellsizeStep  = static_cast<float>(atof(argv[i+3]));
-			g_appSettings.cellsize		= g_appSettings.cellsizeStart;
-		}
-
-
 		if(std::strcmp(strArg.c_str(), "-d") == 0)
 		{
 			g_appSettings.bDrawUtilizationCellProcessInfo = true;
@@ -846,11 +833,59 @@ int main(int argc, char* argv[])
 			strModelFP = AnsiStr(argv[i+1]);
 		}
 
+		if(std::strcmp(strArg.c_str(), "-c") == 0)
+		{
+			g_appSettings.cellsize = static_cast<float>(atof(argv[i+1]));
+			g_appSettings.cellsizeStart = g_appSettings.cellsize;
+			g_appSettings.cellsizeEnd = g_appSettings.cellsize;
+		}
+		else if(std::strcmp(strArg.c_str(), "-cc") == 0)
+		{
+			g_appSettings.cellsizeStart = static_cast<float>(atof(argv[i+1]));
+			g_appSettings.cellsizeEnd   = static_cast<float>(atof(argv[i+2]));
+			g_appSettings.cellsizeStep  = static_cast<float>(atof(argv[i+3]));
+			g_appSettings.cellsize		= g_appSettings.cellsizeStart;
+		}
+
 		if(std::strcmp(strArg.c_str(), "-t") == 0)
 		{
 			g_appSettings.ctThreads = atoi(argv[i+1]);
 			g_appSettings.ctThreadCountStart = g_appSettings.ctThreads;
 			g_appSettings.ctThreadCountEnd = g_appSettings.ctThreads;
+		}
+		else if(std::strcmp(strArg.c_str(), "-tt") == 0)
+		{
+			g_appSettings.ctThreadCountStart = atoi(argv[i+1]);
+			g_appSettings.ctThreadCountEnd = atoi(argv[i+2]);
+			g_appSettings.ctThreads = g_appSettings.ctThreadCountStart;
+		}
+
+		if (std::strcmp(strArg.c_str(), "-m") == 0) {
+			U8 dim = atoi(argv[i + 1]);
+			if (!MPUDim::isValid(dim)) {
+				LogErrorArg1("MPU dimension (%u) is invalid!", dim);
+				exit(1);
+			}
+
+			LogInfoArg1("Set MPU dimension to (%u)", dim);
+			g_appSettings.mpuDim.set(dim);
+			g_appSettings.mpuDimStart = dim;
+			g_appSettings.mpuDimEnd = dim;
+			g_appSettings.mpuDimStep = dim;
+		}
+		else if (std::strcmp(strArg.c_str(), "-mm") == 0)
+		{
+			U8 dim = atoi(argv[i + 1]);
+			if (!MPUDim::isValid(dim)) {
+				LogErrorArg1("MPU dimension (%u) is invalid!", dim);
+				exit(1);
+			}
+
+			LogInfoArg1("Set MPU dimension to (%u)", dim);
+			g_appSettings.mpuDim.set(dim);
+			g_appSettings.mpuDimStart = atoi(argv[i + 1]);
+			g_appSettings.mpuDimEnd = atoi(argv[i + 2]);
+			g_appSettings.mpuDimStep = atoi(argv[i + 3]);
 		}
 
 		if(std::strcmp(strArg.c_str(), "-r") == 0)
@@ -868,6 +903,8 @@ int main(int argc, char* argv[])
 		if(std::strcmp(strArg.c_str(), "-o") == 0)
 		{
 			g_appSettings.bPrintCharts = true;
+			g_appSettings.idxPrintPlotStart = -1;
+			g_appSettings.idxPrintPlotEnd = -1;
 		}
 
 		if(std::strcmp(strArg.c_str(), "-e") == 0)
@@ -885,34 +922,21 @@ int main(int argc, char* argv[])
 			g_appSettings.ctSIMDLength = 1;
 		}
 
-		if(std::strcmp(strArg.c_str(), "-x") == 0)
-		{
-			g_appSettings.ctThreadCountStart = atoi(argv[i+1]);
-			g_appSettings.ctThreadCountEnd = atoi(argv[i+2]);
-			g_appSettings.ctThreads = g_appSettings.ctThreadCountStart;
-		}
-		if(std::strcmp(strArg.c_str(), "-m") == 0)
-		{
-			U8 dim = atoi(argv[i+1]);
-			if(!MPUDim::isValid(dim)) {
-				LogErrorArg1("MPU dimension (%u) is invalid!", dim);
-				exit(1);
-			}
 
-			LogInfoArg1("Set MPU dimension to (%u)", dim);
-			g_appSettings.mpuDim.set(dim);
-		}
 
 		if(std::strcmp(strArg.c_str(), "-h") == 0)
 		{
 			printf("Usage: ParsipCmd -t [threads_count] -i -a [attempts] -c [cell_size] -f [model_file_path]\n");
 			printf("-a \t [runs] Number of runs for stats.\n");
 			printf("-c \t [cellsize] cell size parameter in float.\n");
-			printf("-y \t [Start - End - Step] cell size parameter interval in float.\n");
+			printf("-cc \t [Start - End - Step] cell size parameter interval in float.\n");
+			printf("-t \t [threads count] Threads count.\n");
+			printf("-tt \t [Start - End] Threads count interval.\n");
+			printf("-m \t Sets the MPU grid dimension [default=8].\n");
+			printf("-mm \t [Start - End - Step] MPU grid dim interval [default=8].\n");
+
 			printf("-f \t [filepath] model file path in .scene format.\n");
 			printf("-p \t [Start - End] Plot performance graph using db values in range.\n");
-			printf("-t \t [threads count] Threads count.\n");
-			printf("-x \t [Start - End] Threads count interval.\n");
 			printf("-u \t [Percentage] Utilization width offset from end.\n");
 			printf("-e \t Export mesh as obj.\n");
 			printf("-r \t Path is root.\n");
@@ -920,7 +944,6 @@ int main(int argc, char* argv[])
 			printf("-g \t Run GPU OpenCL polygonizer.\n");
 			printf("-d \t Enables writing average cell processing info in utilization graph.\n");
 			printf("-i \t Sets interactive mode. Each draw call will polygonize.\n");
-			printf("-m \t Sets the MPU grid dimension.\n");
 			printf("-o \t Output MPU processing and Core utilization graphs in svg and eps.\n");
 
 			return 0;
@@ -974,6 +997,24 @@ int main(int argc, char* argv[])
 			strModelFP = strFilePath;
 		}
 	}
+
+
+	//CL test
+	vector<int> arrVals;
+	arrVals.resize(1024);
+	for(int i=0; i < 1024; i++)
+		arrVals[i] = i*i;
+//	HostVector<int> host_vector(arrVals);
+//	DeviceVector<int> device_vector(host_vector);
+	DeviceVector<int> device_vector(arrVals);
+
+	vector<int> vReadBack;
+	device_vector.read(vReadBack);
+	PS::DEBUGTOOLS::PrintArray(reinterpret_cast<U32*>( &vReadBack[0] ), 100);
+
+
+
+
 
 	//Render CPU or GPU renderer
 	bool bPolyRes = false;
@@ -1038,11 +1079,12 @@ bool Run_CPUPoly(const AnsiStr& strModelFP)
 		U32 szNodeMatrices 	= sizeof(SOABlobNodeMatrices);
 
 		U32 szMPU 		= sizeof(MPU);
-		U32 szEdgeTable = sizeof(EdgeTable);
-		U32 szFieldCache = sizeof(float) * 512;
+		U32 szEdgeTable = EdgeTable::MemSizeInBytes(g_appSettings.mpuDim);
+		U32 szFieldCache = g_appSettings.mpuDim.dim3() * sizeof(float);
 
 		szWorkItemMem = szPrims + szNodeMatrices + szOps + szMPU + szEdgeTable + szFieldCache;
 		szTotalMem = szWorkItemMem;
+
 		szLLC = g_cpuInfo.getLastLevelSize();
 
 		printf("Total sizes: BlobOps + BlobPrims + NodeMatrices + MPU + EDGETABLE + FIELDCACHE= %u, %u, %u, %u, %u, %u = %u bytes\n",
@@ -1076,70 +1118,80 @@ bool Run_CPUPoly(const AnsiStr& strModelFP)
 		g_taskSchedular = new tbb::task_scheduler_init(g_appSettings.ctThreads);
 		printf("Parsip CMD - THREADS=%d, SIMD FLEN=%d\n", g_appSettings.ctThreads, g_appSettings.ctSIMDLength);
 
-		for(int iCellStep = 0; iCellStep <= ctCellSteps; iCellStep++)
-		{
-			g_appSettings.cellsize = g_appSettings.cellsizeStart + iCellStep * g_appSettings.cellsizeStep;
-			printf("ParsipSimd - CellSize Param = %.2f, MPU DIM = %u \n", g_appSettings.cellsize, g_appSettings.mpuDim.dim());
+		//for: MPU dim
+		for(int iMPUDim = g_appSettings.mpuDimStart;
+				iMPUDim <= g_appSettings.mpuDimEnd;
+				iMPUDim += g_appSettings.mpuDimStep) {
 
-			g_appSettings.bReady = g_cpuPoly.prepareBBoxes(g_appSettings.cellsize, g_appSettings.mpuDim.dim());
-			vec3i dim = g_cpuPoly.getMPUs()->getWorkDim();
-			vec3f lo = g_cpuPoly.getBlobPrims()->bboxLo;
-			vec3f hi = g_cpuPoly.getBlobPrims()->bboxHi;
-			printf("WorkGrid=[%d, %d, %d], BoxLo=[%.3f %.3f %.3f], BoxHi=[%.3f %.3f %.3f]\n",
-					dim.x, dim.y, dim.z,
-					lo.x, lo.y, lo.z,
-					hi.x, hi.y, hi.z);
+			//set MPU dim
+			g_appSettings.mpuDim.set(iMPUDim);
 
-			//Create data structure to hold stats data
-			MPUSTATS* lpMPUStats = new MPUSTATS[MATHMAX(1, g_cpuPoly.getMPUs()->countWorkUnits())];
-
-			//POLYGONIZE
-			bool bScalar = (g_appSettings.ctSIMDLength == 1);
-			tbb::tick_count t0 = tbb::tick_count::now();
-			for(U32 i=0; (i < g_appSettings.attempts)&&(g_appSettings.bReady); i++)
+			//for: cell size
+			for(int iCellStep = 0; iCellStep <= ctCellSteps; iCellStep++)
 			{
-				g_appSettings.bReady &= g_cpuPoly.polygonize(g_appSettings.cellsize, bScalar, lpMPUStats);
-			}
-			tbb::tick_count t1 = tbb::tick_count::now();
+				g_appSettings.cellsize = g_appSettings.cellsizeStart + iCellStep * g_appSettings.cellsizeStep;
+				printf("ParsipSimd - CellSize Param = %.2f, MPU DIM = %u \n", g_appSettings.cellsize, g_appSettings.mpuDim.dim());
 
-			PrintThreadResults(g_appSettings.attempts);
-			//Insert record in log
-			sqlite_InsertLogRecord(strLogFP.c_str(),
-								   strModelName.c_str(),
-								   lpMPUStats,
-								   t0, t1,
-								   g_appSettings.ctSIMDLength, g_appSettings.ctThreads,
-								   szWorkItemMem, szTotalMem, szLLC);
-			int xpID = sqlite_GetLastXPID(strLogFP.c_str());
+				g_appSettings.bReady = g_cpuPoly.prepareBBoxes(g_appSettings.cellsize, g_appSettings.mpuDim.dim());
+				vec3i dim = g_cpuPoly.getMPUs()->getWorkDim();
+				vec3f lo = g_cpuPoly.getBlobPrims()->bboxLo;
+				vec3f hi = g_cpuPoly.getBlobPrims()->bboxHi;
+				printf("WorkGrid=[%d, %d, %d], BoxLo=[%.3f %.3f %.3f], BoxHi=[%.3f %.3f %.3f]\n",
+						dim.x, dim.y, dim.z,
+						lo.x, lo.y, lo.z,
+						hi.x, hi.y, hi.z);
 
-			//Print and Produce Result Graphs
-			//Thread Processing Results
-			ProduceUsageChartAsTexture(strLogFP.c_str(),
-									   *g_cpuPoly.getMPUs(), lpMPUStats,
+				//Create data structure to hold stats data
+				MPUSTATS* lpMPUStats = new MPUSTATS[MATHMAX(1, g_cpuPoly.getMPUs()->countWorkUnits())];
+
+				//POLYGONIZE
+				bool bScalar = (g_appSettings.ctSIMDLength == 1);
+				tbb::tick_count t0 = tbb::tick_count::now();
+				for(U32 i=0; (i < g_appSettings.attempts)&&(g_appSettings.bReady); i++)
+				{
+					LogInfoArg2("Perform attempt %u of %u", i+1, g_appSettings.attempts);
+					g_appSettings.bReady &= g_cpuPoly.polygonize(g_appSettings.cellsize, bScalar, lpMPUStats);
+				}
+				tbb::tick_count t1 = tbb::tick_count::now();
+
+				PrintThreadResults(g_appSettings.attempts);
+				//Insert record in log
+				sqlite_InsertLogRecord(strLogFP.c_str(),
+									   strModelName.c_str(),
+									   lpMPUStats,
 									   t0, t1,
-									   xpID, ctThreads,
-									   g_appSettings.UtilizationWidthPercentFromEnd);
+									   g_appSettings.ctSIMDLength, g_appSettings.ctThreads,
+									   szWorkItemMem, szTotalMem, szLLC);
+				int xpID = sqlite_GetLastXPID(strLogFP.c_str());
 
-			if(g_appSettings.bPrintCharts)
-				chart_CreateStackChart(xpID, *g_cpuPoly.getMPUs(), lpMPUStats, t0, t1, ctThreads);
-			if(g_appSettings.bExportObj)
-			{
-				printf("Exporting mesh as obj file: xp%i.obj\n", xpID);
-				char buffer[1024];
-				sprintf(buffer, "%s_xp%d.obj", strExePath.c_str(), xpID);
-				ExportMeshAsObj(buffer, *g_cpuPoly.getMPUs());
+				//Print and Produce Result Graphs
+				//Thread Processing Results
+				ProduceUsageChartAsTexture(strLogFP.c_str(),
+										   *g_cpuPoly.getMPUs(), lpMPUStats,
+										   t0, t1,
+										   xpID, ctThreads,
+										   g_appSettings.UtilizationWidthPercentFromEnd);
+
+				if(g_appSettings.bPrintCharts)
+					chart_CreateStackChart(xpID, *g_cpuPoly.getMPUs(), lpMPUStats, t0, t1, ctThreads);
+				if(g_appSettings.bExportObj)
+				{
+					printf("Exporting mesh as obj file: xp%i.obj\n", xpID);
+					char buffer[1024];
+					sprintf(buffer, "%s_xp%d.obj", strExePath.c_str(), xpID);
+					ExportMeshAsObj(buffer, *g_cpuPoly.getMPUs());
+				}
+
+				//delete stats data
+				SAFE_DELETE(lpMPUStats);
+				printf("*********************************************************************\n");
+				glutPostRedisplay();
 			}
-
-			//delete stats data
-			SAFE_DELETE(lpMPUStats);
-			printf("*********************************************************************\n");
 		}
-
-		glutPostRedisplay();
 	}
 	printf("*********************************************************************\n");
 	//////////////////////////////////////////////////////////////////////////
-	if(g_appSettings.bPrintCharts)
+	if(g_appSettings.bPrintCharts && (g_appSettings.idxPrintPlotStart >= 0))
 	{
 		printf("**********************************************************************************\n");
 		printf("Preparing GNUPLOT Data in range [%d, %d] \n",

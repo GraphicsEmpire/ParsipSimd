@@ -24,14 +24,14 @@ namespace CL {
         Buffer(const Buffer& rhs);
         Buffer(cl_mem clMem,
         	   U32 size = sizeof(cl_mem),
-        	   MEMACCESSMODE access = memReadWrite,
+			   cl_mem_flags flags = memReadWrite,
         	   bool isSharedGL = false);
 
         virtual ~Buffer();
         void release();
 
         //Setter
-        void set(cl_mem clMem, U32 size, MEMACCESSMODE access, bool isSharedGL);
+        void set(cl_mem clMem, U32 size, cl_mem_flags access, bool isSharedGL);
 
         //Getters
         cl_mem handle() const {return m_clMem;}
@@ -40,7 +40,7 @@ namespace CL {
         const cl_mem* cptr() const {return &m_clMem;}
         bool isValid() const { return (m_clMem != NULL);}
         
-        MEMACCESSMODE access() const {return m_access;}
+        cl_mem_flags flags() const {return m_flags;}
         bool isSharedWithGL() const {return m_isSharedWithGL;}
 
         Buffer& operator=(const Buffer& rhs);
@@ -50,7 +50,7 @@ namespace CL {
     private:
         U32 m_size;
         cl_mem m_clMem;
-        MEMACCESSMODE m_access;
+        cl_mem_flags m_flags;
         bool m_isSharedWithGL;
     };
     
@@ -137,7 +137,8 @@ public:
 						  cetStart = CL_PROFILING_COMMAND_START,
 						  cetEnd = CL_PROFILING_COMMAND_END};
 
-    enum DEVICETYPE{dtCPU = CL_DEVICE_TYPE_CPU, dtGPU = CL_DEVICE_TYPE_GPU};
+    enum DEVICETYPE {dtCPU = CL_DEVICE_TYPE_CPU, dtGPU = CL_DEVICE_TYPE_GPU};
+    enum VENDORTYPE {vtIntel, vtAMD, vtNvidia, vtApple, vtMisc};
 
 
 	//Constructors
@@ -175,16 +176,16 @@ public:
     /*!
      * Create memory buffer for readonly or writeonly access.
      */
-    cl_mem createMemBuffer(const size_t size, MEMACCESSMODE mode);
-    bool createMemBuffer(const size_t size, MEMACCESSMODE mode, Buffer& b);
+    cl_mem createMemBuffer(const size_t size, cl_mem_flags mode, void* host_ptr = NULL);
+    bool createMemBuffer(const size_t size, cl_mem_flags mode, void* host_ptr, Buffer& buffer);
 
     /*!
      * Create memory buffer for readonly or writeonly access from a GL Buffer.
      */
-    cl_mem createMemBufferFromGL(cl_GLuint glBuffer, MEMACCESSMODE mode);
-    bool createBufferFromGL(cl_GLuint glBuffer, MEMACCESSMODE mode, Buffer& b);
+    cl_mem createMemBufferFromGL(cl_GLuint glBuffer, cl_mem_flags mode);
+    bool createBufferFromGL(cl_GLuint glBuffer, cl_mem_flags mode, Buffer& buffer);
     
-    cl_mem createImageFromGL(cl_GLuint glTex, MEMACCESSMODE mode);
+    cl_mem createImageFromGL(cl_GLuint glTex, cl_mem_flags mode);
 
     /*!
      * Enqueues a write operation in the command queue
@@ -225,9 +226,12 @@ public:
 	bool enqueueReleaseGLObject(cl_uint count, const cl_mem* arrMemObjects);
 
     //Access
+	cl_platform_id getPlatform() const {return m_clPlatform;}
     cl_device_id getDevice() const {return m_clDeviceID;}
     cl_context getContext() const {return m_clContext;}
     cl_command_queue getCommandQ() const {return m_clCommandQueue;}
+    DEVICETYPE getDeviceType() const { return m_deviceType;}
+    VENDORTYPE getVendorType() const { return m_vendorType;}
 
 
     //Profile TimeStamps
@@ -263,6 +267,8 @@ public:
 private:
     std::vector<ComputeProgram*> m_lstPrograms;
     DEVICETYPE      m_deviceType;
+    VENDORTYPE		m_vendorType;
+
     cl_platform_id  m_clPlatform;
     cl_device_id    m_clDeviceID;
 

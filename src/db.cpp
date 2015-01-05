@@ -284,6 +284,12 @@ bool chart_CreateStackChart(int xpID,
 			avgWork += statsThreadProcessed[i];
 		avgWork /= ctThreads;
 
+		//
+		printf("***Begin Per-Thread Results***\n");
+		double maxTimeToFinish = 0.0;
+		double maxImbalanceFactor = GetMinLimit<double>();
+		double minImbalanceFactor = GetMaxLimit<double>();
+
 		for(int i=0; i<ctThreads; i++)
 		{
 			float ratio = (statsThreadProcessed[i] != 0)? (float)(statsThreadCrossed[i] * 100.0f) / (float)statsThreadProcessed[i] : 0.0f;
@@ -294,19 +300,34 @@ bool chart_CreateStackChart(int xpID,
 					statsThreadCrossedTime[i] * 1000.0, statsThreadEmptyTime[i] * 1000.0, dif);
 
 			double y = -1.0f * (ctThreads - i - 1) * hTimeUnit - hGap/2;
-
 			board1 << Text(20, y, string(buffer), Fonts::CourierBold, 4, LibBoard::Color::Black );
-			bool bDetailed = false;
-			if(bDetailed)
-			{
-				//Show Average Cell Processing Info
-				sprintf(buffer, "Avg MPU Time: X %.2f, NX %.2f ms, ImbalanceFactor MPU %.2f",
-						(float)(statsThreadCrossedTime[i] * 1000.0) /(float)statsThreadCrossed[i],
-						(float)(statsThreadEmptyTime[i] * 1000.0) / (float)statsThreadEmpty[i],
-						(float)(statsThreadProcessed[i]) / (float)avgWork);
-				board1 << Text(20, i * hTimeUnit + hTimeStackHalf - 12, string(buffer), Fonts::CourierBold, 4, LibBoard::Color::Black );
-			}
+			printf("%s\n", buffer);
+
+			//Show Average Cell Processing Info
+			double imblFactor = (double) (statsThreadProcessed[i]) / (double) avgWork;
+			sprintf(buffer,
+					"Avg MPU Time: X %.2f, NX %.2f ms, ImbalanceFactor MPU %.2f",
+					(float) (statsThreadCrossedTime[i] * 1000.0)
+							/ (float) statsThreadCrossed[i],
+					(float) (statsThreadEmptyTime[i] * 1000.0)
+							/ (float) statsThreadEmpty[i],
+					imblFactor);
+			board1 << Text(20, y - hTimeStack, string(buffer),
+							Fonts::CourierBold, 4, LibBoard::Color::Black);
+			printf("%s\n\n", buffer);
+
+			//compute global
+			if(dif > maxTimeToFinish)
+				maxTimeToFinish = dif;
+
+			if(imblFactor > maxImbalanceFactor)
+				maxImbalanceFactor = imblFactor;
+			if(imblFactor < minImbalanceFactor)
+				minImbalanceFactor = imblFactor;
 		}
+		printf("***End Per-Thread Results***\n");
+		printf("Global Results. Max TimeToFinish [ms]: %.2f, Max Imbalance Factor: [%.2f, %.2f]\n",
+				maxTimeToFinish, minImbalanceFactor, maxImbalanceFactor);
 
 		sprintf(buffer, "%s/graphs/CoreHorzUsageXP%d.eps", chrFilePath, xpID);
 		board1.saveEPS(buffer, 140, ctThreads * 25.0);

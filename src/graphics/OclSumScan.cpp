@@ -7,6 +7,7 @@
 #include <iostream>
 #include <stdio.h>
 #include "OclSumScan.h"
+#include "graphics/CLManager.h"
 #include "base/FileDirectory.h"
 
 #include "clpp/clppScan.h"
@@ -59,7 +60,44 @@ SumScan::SumScan(){
 	clppProgram::setBasePath(string(strFP.cptr()));
 
 	//Setup context
-	m_context.setup(0, 0);
+	ComputeDevice* pOclDevice = TheCLManager::Instance().device();
+
+	//set values
+	m_context.clQueue = pOclDevice->getCommandQ();
+	m_context.clPlatform = pOclDevice->getPlatform();
+	m_context.clDevice = pOclDevice->getDevice();
+	m_context.clContext = pOclDevice->getContext();
+	m_context.isGPU = (pOclDevice->getDeviceType() == ComputeDevice::dtGPU);
+
+
+	switch(pOclDevice->getVendorType()) {
+	case(ComputeDevice::vtIntel): {
+		m_context.Vendor = Vendor_Intel;
+		break;
+	}
+
+	case(ComputeDevice::vtAMD): {
+		m_context.Vendor = Vendor_AMD;
+		break;
+	}
+
+
+	case(ComputeDevice::vtNvidia): {
+		m_context.Vendor = Vendor_NVidia;
+		break;
+	}
+
+	case(ComputeDevice::vtApple): {
+		m_context.Vendor = Vendor_Apple;
+		break;
+	}
+
+	default:
+		m_context.Vendor = Vendor_Unknown;
+
+	}
+
+
 }
 
 U32 SumScan::compute(U32* arrData, U32 count)

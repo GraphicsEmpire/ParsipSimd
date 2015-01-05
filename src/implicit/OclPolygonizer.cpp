@@ -660,6 +660,7 @@ namespace SKETCH {
 			//PrintArray(lpEdgeTableOffsets, m_gridParam.ctTotalPoints);
 
 			//3. SumScan to compute crossed edges
+			//m_ctVertices = m_lpOclSumScan->compute(m_inoutMemHighEdgesCount, m_gridParam.ctTotalPoints);
 			m_ctVertices = m_lpOclSumScan->compute(lpEdgeTableOffsets, m_gridParam.ctTotalPoints);
 			//PrintArray(lpEdgeTableOffsets, m_gridParam.ctTotalPoints);
 
